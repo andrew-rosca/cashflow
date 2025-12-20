@@ -1,0 +1,1055 @@
+{
+  "features": [
+    {
+      "id": "F001",
+      "category": "core",
+      "priority": 1,
+      "description": "Database connection and Prisma client setup works",
+      "steps": [
+        "Run init.sh successfully",
+        "Prisma client generates without errors",
+        "Database schema is created"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F002",
+      "category": "api",
+      "priority": 1,
+      "description": "Create tracked account via API",
+      "steps": [
+        "POST /api/accounts with type='tracked' returns 201",
+        "Response includes id, userId, name, type, initialBalance",
+        "Account is persisted in database"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F003",
+      "category": "api",
+      "priority": 1,
+      "description": "Create external account via API",
+      "steps": [
+        "POST /api/accounts with type='external' returns 201",
+        "Response includes id, userId, name, type, category",
+        "Account is persisted in database"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F004",
+      "category": "api",
+      "priority": 1,
+      "description": "List all accounts via API",
+      "steps": [
+        "GET /api/accounts returns array of accounts",
+        "Can filter by type=tracked",
+        "Can filter by type=external"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F005",
+      "category": "api",
+      "priority": 1,
+      "description": "Get single account by ID via API",
+      "steps": [
+        "GET /api/accounts/:id returns account details",
+        "Returns 404 for non-existent account",
+        "User can only access their own accounts"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F006",
+      "category": "api",
+      "priority": 1,
+      "description": "Update account via API",
+      "steps": [
+        "PUT /api/accounts/:id updates account fields",
+        "Response includes updated account data",
+        "Changes are persisted in database"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F007",
+      "category": "api",
+      "priority": 1,
+      "description": "Delete account via API",
+      "steps": [
+        "DELETE /api/accounts/:id removes account",
+        "Returns 204 on success",
+        "Account no longer appears in listings"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F008",
+      "category": "api",
+      "priority": 2,
+      "description": "Create one-time transaction via API",
+      "steps": [
+        "POST /api/transactions with date creates one-time transaction",
+        "Response includes all transaction fields",
+        "Transaction is persisted with correct from/to accounts"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F009",
+      "category": "api",
+      "priority": 2,
+      "description": "Create recurring transaction via API",
+      "steps": [
+        "POST /api/transactions with recurrence pattern works",
+        "Recurrence pattern is stored correctly",
+        "All recurrence fields (frequency, interval, dayOfWeek, etc.) are saved"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F010",
+      "category": "api",
+      "priority": 2,
+      "description": "List all transactions via API",
+      "steps": [
+        "GET /api/transactions returns array of transactions",
+        "Can filter by accountId (fromAccountId or toAccountId)",
+        "Can filter by date range (startDate, endDate)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F011",
+      "category": "api",
+      "priority": 2,
+      "description": "Get single transaction by ID via API",
+      "steps": [
+        "GET /api/transactions/:id returns transaction details",
+        "Includes recurrence pattern if recurring",
+        "Returns 404 for non-existent transaction"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F012",
+      "category": "api",
+      "priority": 2,
+      "description": "Update transaction via API",
+      "steps": [
+        "PUT /api/transactions/:id updates transaction fields",
+        "Can update amount, date, description",
+        "Changes are persisted in database"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F013",
+      "category": "api",
+      "priority": 2,
+      "description": "Delete transaction via API",
+      "steps": [
+        "DELETE /api/transactions/:id removes transaction",
+        "Cascades to recurrence pattern if exists",
+        "Transaction no longer appears in listings"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F014",
+      "category": "core",
+      "priority": 2,
+      "description": "Transaction with settlement lag between tracked accounts",
+      "steps": [
+        "Create transaction with settlementDays > 0",
+        "Debit happens on date",
+        "Credit happens on date + settlementDays"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F015",
+      "category": "core",
+      "priority": 3,
+      "description": "Projection engine calculates daily balances for tracked accounts",
+      "steps": [
+        "Given tracked account with initial balance",
+        "Given one-time and recurring transactions",
+        "GET /api/projections returns daily balance for date range"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F016",
+      "category": "core",
+      "priority": 3,
+      "description": "Projection engine materializes recurring transactions",
+      "steps": [
+        "Monthly recurring transaction appears on correct day each month",
+        "Weekly recurring transaction appears on correct day each week",
+        "Bi-weekly recurring transaction appears every N weeks"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F017",
+      "category": "core",
+      "priority": 3,
+      "description": "Projection engine handles recurring with end date",
+      "steps": [
+        "Recurring transaction with endDate stops after that date",
+        "Recurring transaction with occurrences count stops after N occurrences",
+        "Indefinite recurring continues for entire projection range"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F018",
+      "category": "core",
+      "priority": 3,
+      "description": "Projection engine identifies dates where balance <= 0",
+      "steps": [
+        "GET /api/projections includes warning dates",
+        "Warning dates indicate when balance drops to or below zero",
+        "Multiple accounts show separate warnings"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F019",
+      "category": "ui",
+      "priority": 4,
+      "description": "Account management page displays tracked and external accounts",
+      "steps": [
+        "Navigate to /accounts",
+        "See list of tracked accounts with balances",
+        "See list of external accounts with categories"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F020",
+      "category": "ui",
+      "priority": 4,
+      "description": "Create new account via UI form",
+      "steps": [
+        "Click 'Add Account' button",
+        "Fill in account name, type, and optional fields",
+        "Submit form creates account and updates list"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F021",
+      "category": "ui",
+      "priority": 4,
+      "description": "Edit existing account via UI",
+      "steps": [
+        "Click edit on an account",
+        "Update account fields",
+        "Save changes persist and UI updates"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F022",
+      "category": "ui",
+      "priority": 4,
+      "description": "Delete account via UI with confirmation",
+      "steps": [
+        "Click delete on an account",
+        "Confirm deletion in modal",
+        "Account is removed from list"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F023",
+      "category": "ui",
+      "priority": 5,
+      "description": "One-time transaction list view",
+      "steps": [
+        "Navigate to transactions page",
+        "See tab for one-time transactions",
+        "List shows date, from/to accounts, amount, description"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F024",
+      "category": "ui",
+      "priority": 5,
+      "description": "Recurring transaction list view",
+      "steps": [
+        "Navigate to transactions page",
+        "See tab for recurring transactions",
+        "List shows pattern, from/to accounts, amount, description"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F025",
+      "category": "ui",
+      "priority": 5,
+      "description": "Create one-time transaction via UI form",
+      "steps": [
+        "Click 'Add Transaction' in one-time tab",
+        "Fill in from/to accounts, amount, date, description",
+        "Submit creates transaction and updates list"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F026",
+      "category": "ui",
+      "priority": 5,
+      "description": "Create recurring transaction via UI form",
+      "steps": [
+        "Click 'Add Transaction' in recurring tab",
+        "Fill in from/to accounts, amount, recurrence pattern",
+        "Submit creates transaction with pattern and updates list"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F027",
+      "category": "ui",
+      "priority": 5,
+      "description": "Inline account creation during transaction entry",
+      "steps": [
+        "Start creating transaction",
+        "Type new account name in from/to field",
+        "Select 'Create new account' option",
+        "Account is created and selected in transaction form"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F028",
+      "category": "ui",
+      "priority": 5,
+      "description": "Edit transaction via UI",
+      "steps": [
+        "Click edit on a transaction",
+        "Update transaction fields",
+        "Save changes persist and UI updates"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F029",
+      "category": "ui",
+      "priority": 5,
+      "description": "Delete transaction via UI with confirmation",
+      "steps": [
+        "Click delete on a transaction",
+        "Confirm deletion in modal",
+        "Transaction is removed from list"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F030",
+      "category": "ui",
+      "priority": 6,
+      "description": "Main dashboard with balance projection graph",
+      "steps": [
+        "Navigate to home/dashboard",
+        "See line graph of account balance over time",
+        "X-axis shows dates, Y-axis shows balance",
+        "Graph updates based on selected account filter"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F031",
+      "category": "ui",
+      "priority": 6,
+      "description": "Balance projection graph highlights danger zones",
+      "steps": [
+        "View projection graph",
+        "Dates where balance <= 0 are highlighted in red",
+        "Zero line is clearly marked",
+        "Hover shows exact balance on each date"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F032",
+      "category": "ui",
+      "priority": 6,
+      "description": "Upcoming calendar panel shows next 30-60 days",
+      "steps": [
+        "View dashboard",
+        "See calendar showing upcoming transactions",
+        "One-time and materialized recurring transactions appear",
+        "Dates with negative balance are highlighted"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F033",
+      "category": "ui",
+      "priority": 6,
+      "description": "Account filter for dashboard view",
+      "steps": [
+        "See dropdown/selector for accounts",
+        "Select 'All Tracked Accounts' or specific account",
+        "Graph and calendar update to show filtered data",
+        "Selected filter persists on page refresh"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F034",
+      "category": "ui",
+      "priority": 6,
+      "description": "Transaction list filters by selected account",
+      "steps": [
+        "Select an account filter",
+        "Transaction list shows only transactions affecting that account",
+        "Both from and to matches are included",
+        "Clear filter shows all transactions"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F035",
+      "category": "auth",
+      "priority": 7,
+      "description": "User authentication system with session management",
+      "steps": [
+        "NextAuth.js is configured",
+        "Session is created on login",
+        "Protected routes redirect to login",
+        "User data is accessible in API routes"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F036",
+      "category": "auth",
+      "priority": 7,
+      "description": "Apple Sign-In integration",
+      "steps": [
+        "Configure Apple Developer credentials",
+        "Apple Sign-In button appears on login page",
+        "User can authenticate with Apple ID",
+        "User profile is created/updated on successful auth"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F037",
+      "category": "auth",
+      "priority": 7,
+      "description": "Google Sign-In integration",
+      "steps": [
+        "Configure Google OAuth credentials",
+        "Google Sign-In button appears on login page",
+        "User can authenticate with Google account",
+        "User profile is created/updated on successful auth"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F038",
+      "category": "auth",
+      "priority": 7,
+      "description": "User data isolation - users only see their own data",
+      "steps": [
+        "Create accounts/transactions as user A",
+        "Login as user B",
+        "User B cannot see or access user A's data",
+        "API returns 404 or 403 for unauthorized access"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F039",
+      "category": "ui",
+      "priority": 8,
+      "description": "Responsive design for mobile devices",
+      "steps": [
+        "View app on mobile viewport (< 768px)",
+        "Navigation is accessible via hamburger menu",
+        "Forms and lists are usable on small screens",
+        "Graph and calendar adapt to mobile layout"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F040",
+      "category": "ui",
+      "priority": 8,
+      "description": "Dark mode support",
+      "steps": [
+        "Toggle dark mode from UI",
+        "All components render correctly in dark mode",
+        "Preference is saved and persists",
+        "Graph colors are readable in both modes"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F041",
+      "category": "core",
+      "priority": 8,
+      "description": "Input validation and error handling for accounts",
+      "steps": [
+        "Submit empty account name returns validation error",
+        "Submit invalid account type returns error",
+        "Negative initial balance is rejected or warned",
+        "Error messages are clear and actionable"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F042",
+      "category": "core",
+      "priority": 8,
+      "description": "Input validation and error handling for transactions",
+      "steps": [
+        "Submit transaction with negative or zero amount returns error",
+        "Submit transaction with same from/to account returns error",
+        "Submit invalid date returns error",
+        "Submit invalid recurrence pattern returns error"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F043",
+      "category": "core",
+      "priority": 9,
+      "description": "Monthly recurring transaction on specific day of month",
+      "steps": [
+        "Create monthly recurring transaction for day 15",
+        "Verify it appears on 15th of each month",
+        "Handle months with fewer days (e.g., Feb 30 -> last day)",
+        "Works across year boundaries"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F044",
+      "category": "core",
+      "priority": 9,
+      "description": "Weekly recurring transaction on specific day of week",
+      "steps": [
+        "Create weekly recurring transaction for Wednesday",
+        "Verify it appears every Wednesday",
+        "Works across month boundaries",
+        "Continues indefinitely or until end date"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F045",
+      "category": "core",
+      "priority": 9,
+      "description": "Bi-weekly recurring transaction from start date",
+      "steps": [
+        "Create bi-weekly recurring transaction starting Jan 1",
+        "Verify it appears every 2 weeks from start date",
+        "Works correctly across month and year boundaries",
+        "Respects end date or occurrence limit"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F046",
+      "category": "core",
+      "priority": 9,
+      "description": "Recurring transaction with limited occurrences",
+      "steps": [
+        "Create recurring transaction with occurrences=5",
+        "Verify exactly 5 instances are materialized",
+        "No instances appear after the 5th occurrence",
+        "Works with any frequency (daily, weekly, monthly)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F047",
+      "category": "ui",
+      "priority": 9,
+      "description": "Recurrence pattern UI for monthly on specific day",
+      "steps": [
+        "Select 'Monthly' frequency",
+        "Enter day of month (1-31)",
+        "Preview shows next 3 occurrence dates",
+        "Invalid day (e.g., 32) shows validation error"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F048",
+      "category": "ui",
+      "priority": 9,
+      "description": "Recurrence pattern UI for weekly on specific day",
+      "steps": [
+        "Select 'Weekly' frequency",
+        "Choose day of week (Mon-Sun)",
+        "Preview shows next 3 occurrence dates",
+        "Interval option allows 'every N weeks'"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F049",
+      "category": "ui",
+      "priority": 9,
+      "description": "Recurrence pattern UI for bi-weekly from date",
+      "steps": [
+        "Select 'Bi-weekly' frequency",
+        "Start date is used as anchor",
+        "Preview shows next 3 occurrence dates",
+        "Occurrences happen every 14 days from start"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F050",
+      "category": "ui",
+      "priority": 9,
+      "description": "Recurrence end options UI",
+      "steps": [
+        "Choose 'Never' for indefinite recurrence",
+        "Choose 'On date' and select end date",
+        "Choose 'After N occurrences' and enter count",
+        "Preview respects selected end option"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F051",
+      "category": "ui",
+      "priority": 10,
+      "description": "Loading states for async operations",
+      "steps": [
+        "Show spinner/skeleton while fetching accounts",
+        "Show spinner/skeleton while fetching transactions",
+        "Show spinner/skeleton while calculating projections",
+        "Disable form submit buttons during save"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F052",
+      "category": "ui",
+      "priority": 10,
+      "description": "Success feedback for user actions",
+      "steps": [
+        "Show toast/notification on successful account creation",
+        "Show toast/notification on successful transaction creation",
+        "Show toast/notification on successful update/delete",
+        "Toasts auto-dismiss after 3-5 seconds"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F053",
+      "category": "ui",
+      "priority": 10,
+      "description": "Error feedback for failed operations",
+      "steps": [
+        "Show error toast/notification on API failure",
+        "Display inline validation errors on form fields",
+        "Show friendly error message for network issues",
+        "Provide actionable guidance for fixing errors"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F054",
+      "category": "ui",
+      "priority": 10,
+      "description": "Empty states for lists with no data",
+      "steps": [
+        "Show helpful message when no accounts exist",
+        "Show helpful message when no transactions exist",
+        "Include CTA button to create first item",
+        "Empty state design is visually appealing"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F055",
+      "category": "core",
+      "priority": 11,
+      "description": "Prevent deletion of accounts with existing transactions",
+      "steps": [
+        "Create account with transactions",
+        "Attempt to delete account",
+        "Operation is blocked with clear error message",
+        "Option to delete all transactions first is suggested"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F056",
+      "category": "core",
+      "priority": 11,
+      "description": "Cascade delete transactions when account is force deleted",
+      "steps": [
+        "Enable force delete option for accounts",
+        "Delete account with transactions",
+        "All related transactions are deleted",
+        "Projections update to reflect deletion"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F057",
+      "category": "ui",
+      "priority": 11,
+      "description": "Search/filter accounts by name",
+      "steps": [
+        "Enter text in account search field",
+        "List filters to show matching accounts only",
+        "Search is case-insensitive",
+        "Clear search shows all accounts again"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F058",
+      "category": "ui",
+      "priority": 11,
+      "description": "Search/filter transactions by description",
+      "steps": [
+        "Enter text in transaction search field",
+        "List filters to show matching transactions only",
+        "Search is case-insensitive",
+        "Clear search shows all transactions again"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F059",
+      "category": "ui",
+      "priority": 11,
+      "description": "Sort transactions by date, amount, or account",
+      "steps": [
+        "Click column header to sort by that field",
+        "Click again to reverse sort order",
+        "Sort indicator shows current sort field and direction",
+        "Sort persists when adding/editing transactions"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F060",
+      "category": "ui",
+      "priority": 11,
+      "description": "Pagination for large transaction lists",
+      "steps": [
+        "Create > 50 transactions",
+        "List shows 20-50 items per page",
+        "Pagination controls allow navigation",
+        "Page number is reflected in URL"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F061",
+      "category": "core",
+      "priority": 12,
+      "description": "Export projections to CSV",
+      "steps": [
+        "Click 'Export' button on projections page",
+        "CSV file downloads with date, account, balance columns",
+        "File name includes date range",
+        "Opens correctly in Excel/Google Sheets"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F062",
+      "category": "core",
+      "priority": 12,
+      "description": "Export transactions to CSV",
+      "steps": [
+        "Click 'Export' button on transactions page",
+        "CSV file downloads with all transaction fields",
+        "Recurring transactions show pattern details",
+        "Opens correctly in Excel/Google Sheets"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F063",
+      "category": "ui",
+      "priority": 12,
+      "description": "Print-friendly projection report",
+      "steps": [
+        "Click 'Print' or use browser print",
+        "Report includes graph, calendar, and summary",
+        "Layout is optimized for paper",
+        "Colors are readable in grayscale"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F064",
+      "category": "core",
+      "priority": 13,
+      "description": "Projection date range selector (30/60/90 days, custom)",
+      "steps": [
+        "Select preset: 30 days, 60 days, 90 days",
+        "Projections update to show selected range",
+        "Select 'Custom' and enter start/end dates",
+        "Custom range is respected in API call"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F065",
+      "category": "ui",
+      "priority": 13,
+      "description": "Compare multiple accounts on same graph",
+      "steps": [
+        "Select multiple tracked accounts",
+        "Graph shows separate line for each account",
+        "Lines are color-coded with legend",
+        "Hover shows balance for all accounts on that date"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F066",
+      "category": "ui",
+      "priority": 13,
+      "description": "Net worth view across all tracked accounts",
+      "steps": [
+        "View 'Net Worth' mode on dashboard",
+        "Graph shows sum of all tracked account balances",
+        "Clearly indicates total assets",
+        "Updates as accounts change"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F067",
+      "category": "ui",
+      "priority": 14,
+      "description": "Keyboard shortcuts for common actions",
+      "steps": [
+        "Press 'A' to open new account form",
+        "Press 'T' to open new transaction form",
+        "Press 'Esc' to close modals",
+        "Press '?' to show keyboard shortcut help"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F068",
+      "category": "ui",
+      "priority": 14,
+      "description": "Accessibility - screen reader support",
+      "steps": [
+        "Use screen reader to navigate app",
+        "All interactive elements are labeled",
+        "Form inputs have associated labels",
+        "Error messages are announced"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F069",
+      "category": "ui",
+      "priority": 14,
+      "description": "Accessibility - keyboard navigation",
+      "steps": [
+        "Navigate entire app using only keyboard",
+        "Tab order is logical",
+        "Focus indicators are visible",
+        "All actions are accessible without mouse"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F070",
+      "category": "ui",
+      "priority": 14,
+      "description": "Accessibility - color contrast meets WCAG AA",
+      "steps": [
+        "Run accessibility audit tool",
+        "All text has 4.5:1 contrast ratio minimum",
+        "Interactive elements have 3:1 contrast minimum",
+        "Passes in both light and dark modes"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F071",
+      "category": "deployment",
+      "priority": 15,
+      "description": "Deploy to Vercel with environment variables",
+      "steps": [
+        "Connect GitHub repo to Vercel",
+        "Configure DATABASE_URL and auth secrets",
+        "Deploy to production",
+        "App is accessible at production URL"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F072",
+      "category": "deployment",
+      "priority": 15,
+      "description": "Production database is configured and seeded",
+      "steps": [
+        "Production PostgreSQL database is created",
+        "Prisma migrations are applied",
+        "Sample data is optionally seeded",
+        "Database is accessible from Vercel"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F073",
+      "category": "deployment",
+      "priority": 15,
+      "description": "Production environment monitoring and logging",
+      "steps": [
+        "Errors are logged to monitoring service",
+        "Performance metrics are tracked",
+        "API response times are monitored",
+        "Alerts are configured for critical issues"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F074",
+      "category": "future",
+      "priority": 16,
+      "description": "Plaid integration adapter interface defined",
+      "steps": [
+        "Create IntegrationAdapter interface",
+        "Define methods for connecting accounts",
+        "Define methods for importing transactions",
+        "Architecture supports multiple providers"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F075",
+      "category": "future",
+      "priority": 16,
+      "description": "Plaid Link flow for connecting bank accounts",
+      "steps": [
+        "User clicks 'Connect Bank Account'",
+        "Plaid Link modal opens",
+        "User authenticates with bank",
+        "Account is linked and balance is synced"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F076",
+      "category": "future",
+      "priority": 16,
+      "description": "Auto-sync account balances from Plaid",
+      "steps": [
+        "Connected accounts sync balance daily",
+        "Balance updates appear in projections",
+        "User can manually trigger sync",
+        "Sync errors are logged and displayed"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F077",
+      "category": "future",
+      "priority": 16,
+      "description": "Import transactions from Plaid",
+      "steps": [
+        "Fetch new transactions from Plaid",
+        "Map to CashFlow double-entry format",
+        "Create external accounts for merchants",
+        "Avoid duplicates on re-sync"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F078",
+      "category": "future",
+      "priority": 17,
+      "description": "Income/expense reporting by external account",
+      "steps": [
+        "View report page showing income vs expenses",
+        "Group by external account category",
+        "Show totals for selected date range",
+        "Display as table and chart"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F079",
+      "category": "future",
+      "priority": 17,
+      "description": "Cash flow statement generation",
+      "steps": [
+        "Generate cash flow statement for date range",
+        "Show operating, investing, financing activities",
+        "Calculate net change in cash",
+        "Export as PDF or CSV"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F080",
+      "category": "future",
+      "priority": 17,
+      "description": "Budget tracking against external expense accounts",
+      "steps": [
+        "Set budget limits for expense categories",
+        "Track actual spending vs budget",
+        "Show progress bars and alerts",
+        "Warn when approaching or exceeding budget"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F081",
+      "category": "future",
+      "priority": 17,
+      "description": "Multiple currency support",
+      "steps": [
+        "Add currency field to accounts",
+        "Store amounts in account's currency",
+        "Convert currencies for net worth view",
+        "Use exchange rate API"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F082",
+      "category": "future",
+      "priority": 17,
+      "description": "Shared accounts/households",
+      "steps": [
+        "Create household/group entity",
+        "Invite users to household",
+        "Share accounts across household members",
+        "Permissions for view vs edit"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F083",
+      "category": "future",
+      "priority": 17,
+      "description": "Mobile app (React Native or Flutter)",
+      "steps": [
+        "Set up mobile app project",
+        "Connect to same API backend",
+        "Implement core features: accounts, transactions, projections",
+        "Publish to App Store and Google Play"
+      ],
+      "passes": false
+    }
+  ]
+}

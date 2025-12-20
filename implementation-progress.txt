@@ -1,0 +1,315 @@
+# CashFlow Development Progress
+
+## Project Overview
+
+CashFlow is a personal finance application that helps users project future account balances based on expected inflows and outflows. The primary goal is to ensure users never run out of money by visualizing when balances might approach or drop below zero.
+
+**Key Capabilities:**
+- Double-entry transaction tracking
+- Recurring transaction patterns (daily, weekly, bi-weekly, monthly, yearly)
+- Balance projections with danger zone highlighting
+- Multi-account tracking (tracked accounts + external categories)
+- Settlement lag support for transfers
+- API-first architecture
+
+## Architecture Decisions
+
+### Technology Stack
+
+**Frontend:**
+- Next.js 14 (App Router) - Modern React framework with built-in API routes
+- TypeScript - Type safety throughout the application
+- Tailwind CSS - Utility-first styling
+- Recharts - Data visualization for balance projection graphs
+
+**Backend:**
+- Next.js API Routes - Serverless API endpoints
+- NextAuth.js - Authentication (Apple/Google Sign-In)
+- Prisma ORM - Type-safe database access
+- PostgreSQL - Production database
+
+**Deployment:**
+- Vercel - Zero-config deployment for Next.js
+- Vercel Postgres or Supabase - Managed PostgreSQL options
+
+### Key Design Patterns
+
+#### 1. Data Adapter Pattern
+All data access goes through the `DataAdapter` interface (`src/lib/data-adapter.ts`). This abstraction allows:
+- Swapping storage backends without changing business logic
+- Testing with mock adapters
+- Future support for multiple storage options (MongoDB, SQLite, in-memory)
+
+The reference implementation is `PrismaDataAdapter` (`src/lib/prisma-adapter.ts`).
+
+#### 2. Double-Entry Accounting
+Every transaction has:
+- `fromAccountId` (debit) - where money leaves
+- `toAccountId` (credit) - where money arrives
+
+This enables:
+- Accurate tracking of money flow
+- Income/expense reporting by external account
+- Cash flow statements
+- Net worth calculation
+
+Transaction types:
+| From | To | Name |
+|------|-----|------|
+| External (Income) | Tracked Account | Inflow |
+| Tracked Account | External (Expense) | Outflow |
+| Tracked Account | Tracked Account | Transfer |
+
+#### 3. Account Types
+- **Tracked accounts**: Real accounts the user monitors (checking, savings, credit cards)
+  - Have `initialBalance`
+  - Included in projections
+  - Future: sync with Plaid
+
+- **External accounts**: Categories for income/expenses
+  - Optional `category` field
+  - Used for reporting and organization
+  - Not included in projections
+
+#### 4. Recurrence Patterns
+Transactions can recur with flexible patterns:
+- `frequency`: daily, weekly, biweekly, monthly, yearly
+- `interval`: every N periods (e.g., every 2 weeks)
+- `dayOfWeek`: for weekly (0-6)
+- `dayOfMonth`: for monthly (1-31)
+- `endDate`: optional end date
+- `occurrences`: optional limit on number of occurrences
+
+The projection engine materializes recurring transactions into specific dates.
+
+#### 5. Settlement Lag
+For transfers between tracked accounts, `settlementDays` specifies the delay between debit and credit:
+- Debit happens on `date`
+- Credit happens on `date + settlementDays`
+
+This models real-world scenarios like ACH transfers or check deposits.
+
+### Database Schema
+
+**User Management (NextAuth.js):**
+- `User` - User profiles
+- `Account` - OAuth provider accounts
+- `Session` - Active sessions
+- `VerificationToken` - Email verification
+
+**CashFlow Domain:**
+- `CashFlowAccount` - User accounts (tracked/external)
+- `Transaction` - Financial transactions
+- `Recurrence` - Recurring transaction patterns
+
+Key relationships:
+- User → CashFlowAccount (one-to-many)
+- User → Transaction (one-to-many)
+- CashFlowAccount → Transaction (one-to-many for both from and to)
+- Transaction → Recurrence (one-to-one, optional)
+
+### API Design
+
+RESTful API following standard conventions:
+
+**Accounts:**
+- `GET /api/accounts` - List (filterable by type)
+- `POST /api/accounts` - Create
+- `GET /api/accounts/:id` - Get one
+- `PUT /api/accounts/:id` - Update
+- `DELETE /api/accounts/:id` - Delete
+
+**Transactions:**
+- `GET /api/transactions` - List (filterable by account, date range, recurring)
+- `POST /api/transactions` - Create
+- `GET /api/transactions/:id` - Get one
+- `PUT /api/transactions/:id` - Update
+- `DELETE /api/transactions/:id` - Delete
+
+**Projections:**
+- `GET /api/projections` - Calculate (query: accountId, startDate, endDate)
+
+All endpoints:
+- Return JSON
+- Use standard HTTP status codes (200, 201, 204, 400, 404, 500)
+- Include user authentication (to be implemented)
+- Enforce data isolation (users only access their own data)
+
+### UI Components (To Be Built)
+
+1. **Dashboard** - Main view with:
+   - Balance projection graph (line chart)
+   - Upcoming calendar (next 30-60 days)
+   - Account filter dropdown
+   - Danger zone highlights
+
+2. **Accounts Page** - Account management:
+   - List of tracked accounts with balances
+   - List of external accounts with categories
+   - Create/edit/delete forms
+   - Inline creation during transaction entry
+
+3. **Transactions Page** - Transaction management:
+   - Tabs: One-time vs Recurring
+   - List with from/to accounts, amount, date/pattern
+   - Create/edit/delete forms
+   - Recurrence pattern builder
+   - Search/filter/sort
+
+4. **Reports** (Future) - Analytics:
+   - Income/expense by category
+   - Cash flow statement
+   - Budget tracking
+
+### Security Considerations
+
+1. **Authentication**: NextAuth.js with Apple/Google Sign-In
+2. **Authorization**: User ID from session enforced in all API routes
+3. **Data Isolation**: All queries filter by `userId`
+4. **Input Validation**: Zod schemas for request validation (to be added)
+5. **SQL Injection**: Protected by Prisma's parameterized queries
+6. **XSS**: React's automatic escaping + Content Security Policy (to be added)
+
+### Future Enhancements
+
+1. **Plaid Integration**:
+   - Define `IntegrationAdapter` interface
+   - Auto-sync account balances
+   - Import transactions
+   - Map to double-entry format
+
+2. **Advanced Reporting**:
+   - Income/expense by category
+   - Cash flow statement
+   - Budget tracking vs actuals
+
+3. **Multi-User Features**:
+   - Shared accounts/households
+   - Permissions (view vs edit)
+
+4. **Mobile App**:
+   - React Native or Flutter
+   - Same API backend
+   - Offline-first with sync
+
+5. **Additional Features**:
+   - Multiple currencies
+   - Transaction reconciliation
+   - Scheduled reports
+   - What-if scenarios
+
+## Session Log
+
+### Session 1 - Initial Project Setup (December 20, 2025)
+
+**Status**: Scaffolding complete, ready for feature implementation
+
+**Created Files:**
+- `package.json` - Project dependencies and scripts
+- `tsconfig.json` - TypeScript configuration
+- `next.config.js`, `tailwind.config.js`, `postcss.config.js` - Framework configs
+- `.gitignore` - Ignore node_modules, .env, build artifacts
+- `.env.example` - Environment variable template
+- `prisma/schema.prisma` - Complete database schema
+- `src/lib/db.ts` - Prisma client singleton
+- `src/lib/data-adapter.ts` - Data adapter interface
+- `src/lib/prisma-adapter.ts` - Prisma adapter implementation
+- `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/globals.css` - Basic UI structure
+- `src/app/api/accounts/route.ts` - Account CRUD API
+- `src/app/api/accounts/[id]/route.ts` - Single account API
+- `src/app/api/transactions/route.ts` - Transaction CRUD API
+- `src/app/api/transactions/[id]/route.ts` - Single transaction API
+- `src/app/api/projections/route.ts` - Projection calculation API (stub)
+- `init.sh` - Setup and development start script
+- `feature_list.json` - 83 features defined across 17 priority levels
+- `README.md` - Project documentation
+- `claude-progress.txt` - This file
+
+**Architecture Decisions:**
+1. Chose Next.js for unified frontend/backend
+2. PostgreSQL + Prisma for reliable, type-safe data access
+3. Data adapter pattern for storage flexibility
+4. Double-entry model for comprehensive financial tracking
+5. API-first design for future mobile clients
+6. Vercel deployment for simplicity
+
+**What Works:**
+- Project structure is complete
+- API routes are defined (data layer stubbed out)
+- Database schema includes all required entities
+- Setup script will install dependencies and start dev server
+
+**What Needs Work:**
+- Authentication (NextAuth.js setup)
+- Projection calculation engine (materialize recurring, calculate balances)
+- UI components (dashboard, forms, lists, graphs)
+- Input validation (Zod schemas)
+- Error handling and user feedback
+- Testing setup
+
+**Next Steps for Coding Agent:**
+
+1. **First Session**: Verify basic setup
+   - Run `./init.sh`
+   - Confirm database connects
+   - Test account API endpoints with curl/Postman
+   - Mark F001 (database setup) as complete
+
+2. **Early Features** (F002-F007): Account CRUD
+   - These API routes are defined but need testing
+   - May need minor fixes in adapter implementation
+   - Should be quick wins
+
+3. **Transaction Features** (F008-F013): Transaction CRUD
+   - Similar to accounts, mostly implemented
+   - Need to verify recurrence pattern handling
+
+4. **Core Logic** (F014-F018): Projection Engine
+   - Most complex part of the application
+   - Requires algorithm to:
+     - Materialize recurring transactions into specific dates
+     - Calculate daily balances from initial balance + transactions
+     - Identify dates where balance <= 0
+   - This is the heart of the application
+
+5. **UI Development** (F019+): User Interface
+   - Build React components using Tailwind
+   - Integrate with API
+   - Add charts with Recharts
+   - Implement forms and validation
+
+**Recommended Order:**
+1. F001: Verify setup ← START HERE
+2. F002-F007: Account APIs ← Quick wins
+3. F008-F013: Transaction APIs ← Quick wins
+4. F015-F018: Projection engine ← Core functionality
+5. F019-F034: UI components ← User-facing features
+6. F035-F038: Authentication ← Security
+7. F039-F070: Polish (responsive, accessibility, UX)
+8. F071-F073: Deployment ← Go live
+9. F074-F083: Future enhancements ← Post-MVP
+
+---
+
+## Development Guidelines
+
+When working on features:
+
+1. **One feature at a time** - Focus on completing F001, then F002, etc.
+2. **Test end-to-end** - Use curl/Postman for API, browser for UI
+3. **Mark complete only after testing** - Change `"passes": false` to `"passes": true`
+4. **Commit after each feature** - Clear commit messages
+5. **Update this file** - Log decisions, issues, progress
+6. **Leave it working** - Every session should end with a runnable app
+
+Current feature status: 0/83 complete (0%)
+
+---
+
+## Notes
+
+- Currently using stub user ID ("user-1") in API routes
+- Need to implement real authentication before production
+- Projection engine is the most complex feature - may need multiple sessions
+- Consider adding tests for projection logic given its complexity
+- UI design can iterate - start simple, refine later
