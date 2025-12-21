@@ -1053,7 +1053,7 @@
     },
     {
       "id": "F084",
-      "category": "future",
+      "category": "core",
       "priority": 8,
       "description": "Variable recurring transaction amounts",
       "steps": [
@@ -1066,7 +1066,7 @@
     },
     {
       "id": "F085",
-      "category": "future",
+      "category": "core",
       "priority": 9,
       "description": "Transaction notes/memo field",
       "steps": [

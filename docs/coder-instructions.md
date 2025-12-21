@@ -17,12 +17,16 @@ Execute these steps in order:
 
 ### DO:
 - Work on ONE feature at a time
-- operate in TDD fashion--write failing tests first, then write the code to add functionality and pass the tests
+- Operate in TDD fashion--write failing tests first, then write the code to add functionality and pass the tests
 - Write and execute automated tests which exercise each feature end-to-end before marking complete
-- Commit after each completed feature with descriptive messages
+- Commit after each completed feature with descriptive messages, but only if the user hasn't requested to review changes before committing
+   - you should ask them what they prefer in the beginning of the session
+- When committing, make separate logical commits, grouping related changes together; don't mix concerns in the same commit 
 - Update `docs/implementation-progress.txt` with what you did
 - Leave code in a clean, working state
 - Only mark a feature as `"passes": true` after full verification
+- do not attempt to start a development local server yourself if the user has already started one
+- use ephemeral (in memory or temp files) data for automated testing; do not pollute local databases or files with test data
 
 ### DO NOT:
 - Attempt to complete the entire project in one session
