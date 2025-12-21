@@ -498,6 +498,78 @@ Current feature status: 13/83 complete (15.7%)
 
 ---
 
+### Session 5 - Projection Engine Implementation (December 20, 2025)
+
+**Status**: Core projection engine complete with full test coverage
+
+**Completed Features:**
+- ✅ F015: Projection engine calculates daily balances for tracked accounts
+- ✅ F016: Projection engine materializes recurring transactions
+- ✅ F017: Projection engine handles recurring with end date/occurrences
+- ✅ F018: Projection engine identifies dates where balance <= 0
+
+**Changes Made:**
+
+1. **Implemented Complete Projection Engine** (`src/lib/prisma-adapter.ts`)
+   - `getProjections()` method calculates daily balances for any date range
+   - Materializes recurring transactions on-the-fly (no database duplication)
+   - Handles all recurrence patterns: daily, weekly, biweekly, monthly, yearly
+   - Respects end dates and occurrence limits
+   - Integrates settlement lag - debits and credits occur on correct dates
+   - Identifies danger zones (balance <= 0)
+
+2. **Recurring Transaction Materialization**
+   - Template-based approach: one database record expands to multiple occurrences
+   - Supports complex patterns: "every 2 weeks", "15th of each month", etc.
+   - Handles month-end edge cases (e.g., Feb 30 → Feb 28/29)
+   - Efficient: materializes only within requested projection range
+   - Safety limits prevent infinite loops (max 10,000 occurrences)
+
+3. **Balance Calculation Algorithm**
+   - Converts all transactions into dated events (debit/credit)
+   - Applies settlement lag to split transfers across dates
+   - Sorts events chronologically
+   - Calculates running balance day-by-day from initial balance
+   - Returns complete time series of daily balances
+
+4. **Comprehensive Test Suite** (`tests/api/projections.test.ts`)
+   - 11 tests covering all projection scenarios
+   - Tests for one-time and recurring transactions
+   - Tests for all recurrence frequencies
+   - Tests for end dates and occurrence limits
+   - Tests for danger zone identification
+   - Tests for settlement lag integration
+   - All 33 tests passing (100% pass rate)
+
+**What Works:**
+- Calculate future balances for tracked accounts
+- Recurring transactions materialize correctly
+  - Weekly on specific day of week
+  - Biweekly from start date
+  - Monthly on specific day of month
+  - With end dates or occurrence limits
+- Settlement lag splits transfers into separate debit/credit events
+- Identifies when accounts will drop to or below zero
+- Works with multiple accounts simultaneously
+- Efficient for large date ranges
+
+**Technical Highlights:**
+- On-demand materialization: recurring transactions exist as templates, expanded at projection time
+- Edit/delete recurring transaction → all future occurrences automatically update
+- No data duplication or cleanup required
+- Timezone-safe date handling in tests
+- Test isolation with `beforeEach` cleanup
+
+**Next Steps:**
+1. Build dashboard UI with projection graph (F030-F033)
+2. Display balance projections visually
+3. Highlight danger zones in red
+4. Add authentication (F035-F038)
+
+**Progress: 28/83 features complete (33.7%)**
+
+---
+
 ## Notes
 
 - Currently using stub user ID ("user-1") in API routes

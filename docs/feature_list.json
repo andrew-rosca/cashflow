@@ -178,7 +178,7 @@
         "Given one-time and recurring transactions",
         "GET /api/projections returns daily balance for date range"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F016",
@@ -190,7 +190,7 @@
         "Weekly recurring transaction appears on correct day each week",
         "Bi-weekly recurring transaction appears every N weeks"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F017",
@@ -202,7 +202,7 @@
         "Recurring transaction with occurrences count stops after N occurrences",
         "Indefinite recurring continues for entire projection range"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F018",
@@ -214,7 +214,7 @@
         "Warning dates indicate when balance drops to or below zero",
         "Multiple accounts show separate warnings"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F019",
