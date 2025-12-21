@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DateInput from '@/components/DateInput'
+import { LogicalDate } from '@/lib/logical-date'
 
 // Use jsdom environment for React component tests
 // @vitest-environment jsdom
@@ -16,7 +17,7 @@ describe('DateInput Component', () => {
   })
 
   it('should render date input with initial value', () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20)) // Jan 20, 2025
+    const testDate = LogicalDate.fromString('2025-01-20') // Jan 20, 2025
     render(<DateInput value={testDate} onChange={mockOnChange} />)
 
     expect(screen.getByDisplayValue('20')).toBeInTheDocument()
@@ -25,7 +26,7 @@ describe('DateInput Component', () => {
   })
 
   it('should open calendar when day field is clicked', async () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20))
+    const testDate = LogicalDate.fromString('2025-01-20')
     render(<DateInput value={testDate} onChange={mockOnChange} />)
 
     const dayInput = screen.getByDisplayValue('20')
@@ -40,7 +41,7 @@ describe('DateInput Component', () => {
   })
 
   it('should update date when user changes day', async () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20))
+    const testDate = LogicalDate.fromString('2025-01-20')
     render(<DateInput value={testDate} onChange={mockOnChange} />)
 
     const dayInput = screen.getByDisplayValue('20')
@@ -56,14 +57,14 @@ describe('DateInput Component', () => {
     await waitFor(() => {
       expect(mockOnChange).toHaveBeenCalled()
       const calledDate = mockOnChange.mock.calls[0][0]
-      expect(calledDate.getUTCDate()).toBe(25)
-      expect(calledDate.getUTCMonth()).toBe(0) // January
-      expect(calledDate.getUTCFullYear()).toBe(2025)
+      expect(calledDate.day).toBe(25)
+      expect(calledDate.month).toBe(1) // January
+      expect(calledDate.year).toBe(2025)
     }, { timeout: 2000 })
   })
 
   it('should update date when user changes month', async () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20)) // January
+    const testDate = LogicalDate.fromString('2025-01-20') // January
     render(<DateInput value={testDate} onChange={mockOnChange} />)
 
     const monthInput = screen.getByDisplayValue('Jan')
@@ -77,12 +78,12 @@ describe('DateInput Component', () => {
     await waitFor(() => {
       expect(mockOnChange).toHaveBeenCalled()
       const calledDate = mockOnChange.mock.calls[0][0]
-      expect(calledDate.getUTCMonth()).toBe(1) // February
+      expect(calledDate.month).toBe(2) // February
     }, { timeout: 2000 })
   })
 
   it('should update date when user changes year', async () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20))
+    const testDate = LogicalDate.fromString('2025-01-20')
     render(<DateInput value={testDate} onChange={mockOnChange} />)
 
     const yearInput = screen.getByDisplayValue('2025')
@@ -94,12 +95,12 @@ describe('DateInput Component', () => {
     await waitFor(() => {
       expect(mockOnChange).toHaveBeenCalled()
       const calledDate = mockOnChange.mock.calls[0][0]
-      expect(calledDate.getUTCFullYear()).toBe(2026)
+      expect(calledDate.year).toBe(2026)
     })
   })
 
   it('should auto-complete month name when typing', async () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20))
+    const testDate = LogicalDate.fromString('2025-01-20')
     render(<DateInput value={testDate} onChange={mockOnChange} />)
 
     const monthInput = screen.getByDisplayValue('Jan')
@@ -113,7 +114,7 @@ describe('DateInput Component', () => {
   })
 
   it('should handle date selection from calendar', async () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20))
+    const testDate = LogicalDate.fromString('2025-01-20')
     render(<DateInput value={testDate} onChange={mockOnChange} />)
 
     // Open calendar
@@ -137,7 +138,7 @@ describe('DateInput Component', () => {
       await waitFor(() => {
         expect(mockOnChange).toHaveBeenCalled()
         const calledDate = mockOnChange.mock.calls[0][0]
-        expect(calledDate.getUTCDate()).toBe(15)
+        expect(calledDate.day).toBe(15)
       })
     } else {
       // If we can't find the button, at least verify calendar opened
@@ -147,7 +148,7 @@ describe('DateInput Component', () => {
   })
 
   it('should call onBlur when focus leaves the component', async () => {
-    const testDate = new Date(Date.UTC(2025, 0, 20))
+    const testDate = LogicalDate.fromString('2025-01-20')
     render(
       <div>
         <DateInput value={testDate} onChange={mockOnChange} onBlur={mockOnBlur} />
@@ -165,11 +166,11 @@ describe('DateInput Component', () => {
   })
 
   it('should handle UTC dates correctly to avoid timezone issues', () => {
-    // Test that dates are parsed as UTC, not local time
-    const utcDate = new Date(Date.UTC(2025, 0, 20))
-    render(<DateInput value={utcDate} onChange={mockOnChange} />)
+    // Test that dates are parsed correctly without timezone issues
+    const testDate = LogicalDate.fromString('2025-01-20')
+    render(<DateInput value={testDate} onChange={mockOnChange} />)
 
-    // Should display correct UTC date components
+    // Should display correct date components
     expect(screen.getByDisplayValue('20')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Jan')).toBeInTheDocument()
     expect(screen.getByDisplayValue('2025')).toBeInTheDocument()

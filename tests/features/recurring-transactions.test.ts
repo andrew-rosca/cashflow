@@ -72,7 +72,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: savingsAccountId,
         toAccountId: expenseAccountId,
         amount: 100,
-        date: new Date('2025-01-15'),
+        date: LogicalDate.fromString('2025-01-15'),
         description: 'Monthly subscription on 15th',
         recurrence: {
           frequency: 'monthly',
@@ -80,8 +80,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-01-01')
-      const endDate = new Date('2025-04-30')
+      const startDate = LogicalDate.fromString('2025-01-01')
+      const endDate = LogicalDate.fromString('2025-04-30')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: savingsAccountId,
@@ -91,12 +91,12 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
 
       // Verify payments occur on 15th of each month
       // Start balance is 5000, payment is -100 on Jan 15, Feb 15, Mar 15, Apr 15
-      const jan15 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 15)
-      const jan16 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 16)
-      const feb15 = projections.find(p => p.date.getMonth() === 1 && p.date.getDate() === 15)
-      const feb16 = projections.find(p => p.date.getMonth() === 1 && p.date.getDate() === 16)
-      const mar15 = projections.find(p => p.date.getMonth() === 2 && p.date.getDate() === 15)
-      const apr15 = projections.find(p => p.date.getMonth() === 3 && p.date.getDate() === 15)
+      const jan15 = projections.find(p => p.date.month === 1 && p.date.day === 15)
+      const jan16 = projections.find(p => p.date.month === 1 && p.date.day === 16)
+      const feb15 = projections.find(p => p.date.month === 2 && p.date.day === 15)
+      const feb16 = projections.find(p => p.date.month === 2 && p.date.day === 16)
+      const mar15 = projections.find(p => p.date.month === 3 && p.date.day === 15)
+      const apr15 = projections.find(p => p.date.month === 4 && p.date.day === 15)
 
       // Payments applied ON the 15th each month
       expect(jan15!.balance).toBe(4900) // 5000 - 100 (first payment on Jan 15)
@@ -113,7 +113,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: savingsAccountId,
         toAccountId: expenseAccountId,
         amount: 50,
-        date: new Date('2025-01-15'),
+        date: LogicalDate.fromString('2025-01-15'),
         description: 'Monthly payment on 15th',
         recurrence: {
           frequency: 'monthly',
@@ -121,8 +121,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-01-01')
-      const endDate = new Date('2025-04-30')
+      const startDate = LogicalDate.fromString('2025-01-01')
+      const endDate = LogicalDate.fromString('2025-04-30')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: savingsAccountId,
@@ -131,10 +131,10 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       // Verify payments occur on the 15th of Jan, Feb (short month), Mar, Apr
-      const jan15 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 15)
-      const feb15 = projections.find(p => p.date.getMonth() === 1 && p.date.getDate() === 15)
-      const mar15 = projections.find(p => p.date.getMonth() === 2 && p.date.getDate() === 15)
-      const apr15 = projections.find(p => p.date.getMonth() === 3 && p.date.getDate() === 15)
+      const jan15 = projections.find(p => p.date.month === 1 && p.date.day === 15)
+      const feb15 = projections.find(p => p.date.month === 2 && p.date.day === 15)
+      const mar15 = projections.find(p => p.date.month === 3 && p.date.day === 15)
+      const apr15 = projections.find(p => p.date.month === 4 && p.date.day === 15)
 
       // Verify payments work across month boundaries including short months
       expect(jan15!.balance).toBe(4950) // 5000 - 50
@@ -149,7 +149,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: expenseAccountId,
         toAccountId: checkingAccountId,
         amount: 200,
-        date: new Date('2025-12-25'),
+        date: LogicalDate.fromString('2025-12-25'),
         description: 'Monthly income on 25th',
         recurrence: {
           frequency: 'monthly',
@@ -157,8 +157,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-12-01')
-      const endDate = new Date('2026-02-28')
+      const startDate = LogicalDate.fromString('2025-12-01')
+      const endDate = LogicalDate.fromString('2026-02-28')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: checkingAccountId,
@@ -166,9 +166,9 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         endDate,
       })
 
-      const dec25 = projections.find(p => p.date.getFullYear() === 2025 && p.date.getMonth() === 11 && p.date.getDate() === 25)
-      const jan25 = projections.find(p => p.date.getFullYear() === 2026 && p.date.getMonth() === 0 && p.date.getDate() === 25)
-      const feb25 = projections.find(p => p.date.getFullYear() === 2026 && p.date.getMonth() === 1 && p.date.getDate() === 25)
+      const dec25 = projections.find(p => p.date.year === 2025 && p.date.month === 12 && p.date.day === 25)
+      const jan25 = projections.find(p => p.date.year === 2026 && p.date.month === 1 && p.date.day === 25)
+      const feb25 = projections.find(p => p.date.year === 2026 && p.date.month === 2 && p.date.day === 25)
 
       // Each month should show the +200 income
       expect(dec25).toBeDefined()
@@ -186,7 +186,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: salaryAccountId,
         toAccountId: checkingAccountId,
         amount: 75,
-        date: new Date('2025-01-01'), // Wednesday Jan 1, 2025
+        date: LogicalDate.fromString('2025-01-01'), // Wednesday Jan 1, 2025
         description: 'Weekly payment on Wednesday',
         recurrence: {
           frequency: 'weekly',
@@ -194,8 +194,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-01-01')
-      const endDate = new Date('2025-01-31')
+      const startDate = LogicalDate.fromString('2025-01-01')
+      const endDate = LogicalDate.fromString('2025-01-31')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: checkingAccountId,
@@ -204,11 +204,11 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       // Wednesdays in Jan 2025: 1, 8, 15, 22, 29
-      const jan1 = projections.find(p => p.date.getDate() === 1)
-      const jan8 = projections.find(p => p.date.getDate() === 8)
-      const jan15 = projections.find(p => p.date.getDate() === 15)
-      const jan22 = projections.find(p => p.date.getDate() === 22)
-      const jan29 = projections.find(p => p.date.getDate() === 29)
+      const jan1 = projections.find(p => p.date.day === 1)
+      const jan8 = projections.find(p => p.date.day === 8)
+      const jan15 = projections.find(p => p.date.day === 15)
+      const jan22 = projections.find(p => p.date.day === 22)
+      const jan29 = projections.find(p => p.date.day === 29)
 
       // Each Wednesday should increase balance by 75
       expect(jan8!.balance).toBe(jan1!.balance + 75)
@@ -223,7 +223,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: checkingAccountId,
         toAccountId: expenseAccountId,
         amount: 25,
-        date: new Date('2025-01-03'), // Friday Jan 3, 2025
+        date: LogicalDate.fromString('2025-01-03'), // Friday Jan 3, 2025
         description: 'Weekly expense on Friday',
         recurrence: {
           frequency: 'weekly',
@@ -231,8 +231,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-01-01')
-      const endDate = new Date('2025-02-28')
+      const startDate = LogicalDate.fromString('2025-01-01')
+      const endDate = LogicalDate.fromString('2025-02-28')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: checkingAccountId,
@@ -241,12 +241,12 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       // Fridays in Jan-Feb 2025: Jan 3, 10, 17, 24, 31, Feb 7, 14, 21, 28
-      const jan2 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 2)
-      const jan3 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 3)
-      const jan10 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 10)
-      const jan17 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 17)
-      const jan31 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 31)
-      const feb7 = projections.find(p => p.date.getMonth() === 1 && p.date.getDate() === 7)
+      const jan2 = projections.find(p => p.date.month === 1 && p.date.day === 2)
+      const jan3 = projections.find(p => p.date.month === 1 && p.date.day === 3)
+      const jan10 = projections.find(p => p.date.month === 1 && p.date.day === 10)
+      const jan17 = projections.find(p => p.date.month === 1 && p.date.day === 17)
+      const jan31 = projections.find(p => p.date.month === 1 && p.date.day === 31)
+      const feb7 = projections.find(p => p.date.month === 2 && p.date.day === 7)
 
       // Balance should decrease by 25 each Friday (but Jan 3 is Thursday, not Friday!)
       // Let's just verify the pattern works across months
@@ -262,17 +262,17 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: salaryAccountId,
         toAccountId: savingsAccountId,
         amount: 100,
-        date: new Date('2025-02-03'), // Monday
+        date: LogicalDate.fromString('2025-02-03'), // Monday
         description: 'Weekly with end date',
         recurrence: {
           frequency: 'weekly',
           dayOfWeek: 1, // Monday
-          endDate: new Date('2025-02-17'),
+          endDate: LogicalDate.fromString('2025-02-17'),
         },
       })
 
-      const startDate = new Date('2025-02-01')
-      const endDate = new Date('2025-03-10')
+      const startDate = LogicalDate.fromString('2025-02-01')
+      const endDate = LogicalDate.fromString('2025-03-10')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: savingsAccountId,
@@ -281,11 +281,11 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       // Verify payments occur on Feb 3, 10, 17 (Mon) but NOT after end date (Feb 17)
-      const feb3 = projections.find(p => p.date.getDate() === 3)
-      const feb10 = projections.find(p => p.date.getDate() === 10)
-      const feb17 = projections.find(p => p.date.getDate() === 17)
-      const feb18 = projections.find(p => p.date.getDate() === 18)
-      const feb24 = projections.find(p => p.date.getDate() === 24)
+      const feb3 = projections.find(p => p.date.day === 3)
+      const feb10 = projections.find(p => p.date.day === 10)
+      const feb17 = projections.find(p => p.date.day === 17)
+      const feb18 = projections.find(p => p.date.day === 18)
+      const feb24 = projections.find(p => p.date.day === 24)
 
       // Start balance is 5000, +100 on Feb 3, 10, 17
       expect(feb3!.balance).toBe(5100) // 5000 + 100 (first payment)
@@ -303,7 +303,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: salaryAccountId,
         toAccountId: checkingAccountId,
         amount: 1000,
-        date: new Date('2025-01-01'),
+        date: LogicalDate.fromString('2025-01-01'),
         description: 'Bi-weekly paycheck',
         recurrence: {
           frequency: 'weekly',
@@ -311,8 +311,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-01-01')
-      const endDate = new Date('2025-02-28')
+      const startDate = LogicalDate.fromString('2025-01-01')
+      const endDate = LogicalDate.fromString('2025-02-28')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: checkingAccountId,
@@ -322,10 +322,10 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
 
       // Should occur on Jan 1, 15, 29, Feb 12, 26
       const jan1 = projections[0]
-      const jan15 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 15)
-      const jan29 = projections.find(p => p.date.getMonth() === 0 && p.date.getDate() === 29)
-      const feb12 = projections.find(p => p.date.getMonth() === 1 && p.date.getDate() === 12)
-      const feb26 = projections.find(p => p.date.getMonth() === 1 && p.date.getDate() === 26)
+      const jan15 = projections.find(p => p.date.month === 1 && p.date.day === 15)
+      const jan29 = projections.find(p => p.date.month === 1 && p.date.day === 29)
+      const feb12 = projections.find(p => p.date.month === 2 && p.date.day === 12)
+      const feb26 = projections.find(p => p.date.month === 2 && p.date.day === 26)
 
       expect(jan1.balance).toBe(1000 + 1000)
       expect(jan15!.balance).toBeGreaterThan(jan1.balance)
@@ -340,7 +340,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: checkingAccountId,
         toAccountId: expenseAccountId,
         amount: 500,
-        date: new Date('2025-12-15'),
+        date: LogicalDate.fromString('2025-12-15'),
         description: 'Bi-weekly expense',
         recurrence: {
           frequency: 'weekly',
@@ -348,8 +348,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-12-01')
-      const endDate = new Date('2026-01-31')
+      const startDate = LogicalDate.fromString('2025-12-01')
+      const endDate = LogicalDate.fromString('2026-01-31')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: checkingAccountId,
@@ -358,10 +358,10 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       // Should occur on Dec 15, 29, Jan 12, 26
-      const dec15 = projections.find(p => p.date.getFullYear() === 2025 && p.date.getMonth() === 11 && p.date.getDate() === 15)
-      const dec29 = projections.find(p => p.date.getFullYear() === 2025 && p.date.getMonth() === 11 && p.date.getDate() === 29)
-      const jan12 = projections.find(p => p.date.getFullYear() === 2026 && p.date.getMonth() === 0 && p.date.getDate() === 12)
-      const jan26 = projections.find(p => p.date.getFullYear() === 2026 && p.date.getMonth() === 0 && p.date.getDate() === 26)
+      const dec15 = projections.find(p => p.date.year === 2025 && p.date.month === 12 && p.date.day === 15)
+      const dec29 = projections.find(p => p.date.year === 2025 && p.date.month === 12 && p.date.day === 29)
+      const jan12 = projections.find(p => p.date.year === 2026 && p.date.month === 1 && p.date.day === 12)
+      const jan26 = projections.find(p => p.date.year === 2026 && p.date.month === 1 && p.date.day === 26)
 
       expect(dec15).toBeDefined()
       expect(dec29).toBeDefined()
@@ -375,17 +375,17 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: salaryAccountId,
         toAccountId: savingsAccountId,
         amount: 250,
-        date: new Date('2025-03-01'),
+        date: LogicalDate.fromString('2025-03-01'),
         description: 'Bi-weekly with end',
         recurrence: {
           frequency: 'weekly',
           interval: 2,
-          endDate: new Date('2025-03-20'),
+          endDate: LogicalDate.fromString('2025-03-20'),
         },
       })
 
-      const startDate = new Date('2025-03-01')
-      const endDate = new Date('2025-04-15')
+      const startDate = LogicalDate.fromString('2025-03-01')
+      const endDate = LogicalDate.fromString('2025-04-15')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: savingsAccountId,
@@ -394,9 +394,9 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       const mar1 = projections[0]
-      const mar15 = projections.find(p => p.date.getDate() === 15)
-      const mar29 = projections.find(p => p.date.getDate() === 29)
-      const apr12 = projections.find(p => p.date.getMonth() === 3 && p.date.getDate() === 12)
+      const mar15 = projections.find(p => p.date.day === 15)
+      const mar29 = projections.find(p => p.date.day === 29)
+      const apr12 = projections.find(p => p.date.month === 4 && p.date.day === 12)
 
       // Should have payments on Mar 1, 15 (within end date) but NOT Mar 29 (after end date)
       expect(mar15!.balance).toBe(mar1.balance + 250)
@@ -412,7 +412,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: expenseAccountId,
         toAccountId: savingsAccountId,
         amount: 200,
-        date: new Date('2025-04-01'),
+        date: LogicalDate.fromString('2025-04-01'),
         description: 'Limited to 5 payments',
         recurrence: {
           frequency: 'weekly',
@@ -420,8 +420,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-04-01')
-      const endDate = new Date('2025-05-15')
+      const startDate = LogicalDate.fromString('2025-04-01')
+      const endDate = LogicalDate.fromString('2025-05-15')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: savingsAccountId,
@@ -430,12 +430,12 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       const apr1 = projections[0]
-      const apr8 = projections.find(p => p.date.getDate() === 8)
-      const apr15 = projections.find(p => p.date.getDate() === 15)
-      const apr22 = projections.find(p => p.date.getDate() === 22)
-      const apr29 = projections.find(p => p.date.getDate() === 29)
-      const may6 = projections.find(p => p.date.getMonth() === 4 && p.date.getDate() === 6)
-      const may13 = projections.find(p => p.date.getMonth() === 4 && p.date.getDate() === 13)
+      const apr8 = projections.find(p => p.date.day === 8)
+      const apr15 = projections.find(p => p.date.day === 15)
+      const apr22 = projections.find(p => p.date.day === 22)
+      const apr29 = projections.find(p => p.date.day === 29)
+      const may6 = projections.find(p => p.date.month === 5 && p.date.day === 6)
+      const may13 = projections.find(p => p.date.month === 5 && p.date.day === 13)
 
       // Should see 5 increases: Apr 1, 8, 15, 22, 29
       expect(apr8!.balance).toBe(apr1.balance + 200)
@@ -454,7 +454,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: checkingAccountId,
         toAccountId: expenseAccountId,
         amount: 150,
-        date: new Date('2025-06-05'),
+        date: LogicalDate.fromString('2025-06-05'),
         description: 'Monthly limited to 3',
         recurrence: {
           frequency: 'monthly',
@@ -462,8 +462,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-06-01')
-      const endDate = new Date('2025-10-31')
+      const startDate = LogicalDate.fromString('2025-06-01')
+      const endDate = LogicalDate.fromString('2025-10-31')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: checkingAccountId,
@@ -471,11 +471,11 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         endDate,
       })
 
-      const jun5 = projections.find(p => p.date.getMonth() === 5 && p.date.getDate() === 5)
-      const jul5 = projections.find(p => p.date.getMonth() === 6 && p.date.getDate() === 5)
-      const aug5 = projections.find(p => p.date.getMonth() === 7 && p.date.getDate() === 5)
-      const sep5 = projections.find(p => p.date.getMonth() === 8 && p.date.getDate() === 5)
-      const oct5 = projections.find(p => p.date.getMonth() === 9 && p.date.getDate() === 5)
+      const jun5 = projections.find(p => p.date.month === 6 && p.date.day === 5)
+      const jul5 = projections.find(p => p.date.month === 7 && p.date.day === 5)
+      const aug5 = projections.find(p => p.date.month === 8 && p.date.day === 5)
+      const sep5 = projections.find(p => p.date.month === 9 && p.date.day === 5)
+      const oct5 = projections.find(p => p.date.month === 10 && p.date.day === 5)
 
       // Should have 3 payments: Jun, Jul, Aug
       expect(jun5).toBeDefined()
@@ -493,7 +493,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         fromAccountId: salaryAccountId,
         toAccountId: checkingAccountId,
         amount: 10,
-        date: new Date('2025-07-01'),
+        date: LogicalDate.fromString('2025-07-01'),
         description: 'Daily limited to 10',
         recurrence: {
           frequency: 'daily',
@@ -501,8 +501,8 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
         },
       })
 
-      const startDate = new Date('2025-07-01')
-      const endDate = new Date('2025-07-20')
+      const startDate = LogicalDate.fromString('2025-07-01')
+      const endDate = LogicalDate.fromString('2025-07-20')
 
       const projections = await adapter.getProjections(TEST_USER_ID, {
         accountId: checkingAccountId,
@@ -511,9 +511,9 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       })
 
       const jul1 = projections[0]
-      const jul10 = projections.find(p => p.date.getDate() === 10)
-      const jul11 = projections.find(p => p.date.getDate() === 11)
-      const jul12 = projections.find(p => p.date.getDate() === 12)
+      const jul10 = projections.find(p => p.date.day === 10)
+      const jul11 = projections.find(p => p.date.day === 11)
+      const jul12 = projections.find(p => p.date.day === 12)
 
       // Should have 10 daily increases (Jul 1-10 inclusive = 10 occurrences)
       // Jul 1: 1000 + 10 = 1010

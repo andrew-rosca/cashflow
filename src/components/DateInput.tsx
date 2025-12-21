@@ -35,17 +35,24 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
 
   // Parse initial value to LogicalDate
   useEffect(() => {
-    const logicalDate = typeof value === 'string' 
-      ? LogicalDate.fromString(value)
-      : value
-    
-    if (logicalDate) {
-      const monthName = MONTHS[logicalDate.month - 1]
-      setDay(String(logicalDate.day).padStart(2, '0'))
-      setMonth(monthName)
-      setYear(String(logicalDate.year))
-      setMonthInput(monthName)
-      setPrevMonthInputLength(monthName.length)
+    try {
+      const logicalDate = typeof value === 'string' 
+        ? LogicalDate.fromString(value)
+        : value
+      
+      if (logicalDate && logicalDate.month >= 1 && logicalDate.month <= 12) {
+        const monthName = MONTHS[logicalDate.month - 1]
+        if (monthName) {
+          setDay(String(logicalDate.day).padStart(2, '0'))
+          setMonth(monthName)
+          setYear(String(logicalDate.year))
+          setMonthInput(monthName)
+          setPrevMonthInputLength(monthName.length)
+        }
+      }
+    } catch (error) {
+      // Invalid date value, leave fields empty
+      console.warn('Invalid date value in DateInput:', value, error)
     }
   }, [value])
 

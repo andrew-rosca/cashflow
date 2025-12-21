@@ -1,11 +1,25 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest'
+import { startTestServer, stopTestServer, TestServer } from '../e2e/fixtures/test-server'
+import { LogicalDate, today } from '@/lib/logical-date'
 
-const API_BASE = 'http://localhost:3000'
 const TEST_USER_ID = 'user-1'
 
 describe('Dashboard Features (F030-F033)', () => {
+  let testServer: TestServer
+  let API_BASE: string
   let testAccount: any
   let testTransaction: any
+
+  beforeAll(async () => {
+    // Start test server with ephemeral database
+    testServer = await startTestServer(3000)
+    API_BASE = testServer.baseUrl
+  })
+
+  afterAll(async () => {
+    // Stop test server and clean up database
+    await stopTestServer()
+  })
 
   beforeEach(async () => {
     // Clean up: Delete all transactions and accounts
@@ -21,19 +35,21 @@ describe('Dashboard Features (F030-F033)', () => {
 
   it('F030: should fetch projections for a tracked account', async () => {
     // Create an account
+    const todayDate = today()
     const accountRes = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Checking Account',
         initialBalance: 1000,
-        balanceAsOf: new Date().toISOString()
+        balanceAsOf: todayDate.toString()
       })
     })
     expect(accountRes.ok).toBe(true)
     testAccount = await accountRes.json()
 
     // Create a one-time transaction
+    const transactionDate = todayDate.addDays(7) // 7 days from now
     const txRes = await fetch(`${API_BASE}/api/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -42,19 +58,17 @@ describe('Dashboard Features (F030-F033)', () => {
         toAccountId: testAccount.id,
         amount: 100,
         description: 'Test expense',
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+        date: transactionDate.toString()
       })
     })
     expect(txRes.ok).toBe(true)
 
     // Fetch projections
-    const today = new Date()
-    const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
-
-    const formatDate = (date: Date) => date.toISOString().split('T')[0]
+    const startDate = todayDate
+    const endDate = todayDate.addDays(60)
 
     const projRes = await fetch(
-      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${formatDate(today)}&endDate=${formatDate(in60Days)}`
+      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${startDate.toString()}&endDate=${endDate.toString()}`
     )
     expect(projRes.ok).toBe(true)
 
@@ -71,13 +85,14 @@ describe('Dashboard Features (F030-F033)', () => {
 
   it('F031: should identify danger zones (balance <= 0)', async () => {
     // Create an account with low initial balance
+    const todayDate = today()
     const accountRes = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Low Balance Account',
         initialBalance: 100,
-        balanceAsOf: new Date().toISOString()
+        balanceAsOf: todayDate.toString()
       })
     })
     expect(accountRes.ok).toBe(true)
@@ -90,13 +105,14 @@ describe('Dashboard Features (F030-F033)', () => {
       body: JSON.stringify({
         name: 'Bills',
         initialBalance: 0,
-        balanceAsOf: new Date().toISOString()
+        balanceAsOf: todayDate.toString()
       })
     })
     expect(externalRes.ok).toBe(true)
     const externalAccount = await externalRes.json()
 
     // Create a large expense that will cause negative balance
+    const transactionDate = todayDate.addDays(5) // 5 days from now
     const txRes = await fetch(`${API_BASE}/api/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,18 +121,17 @@ describe('Dashboard Features (F030-F033)', () => {
         toAccountId: externalAccount.id,
         amount: 150,
         description: 'Large expense',
-        date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days from now
+        date: transactionDate.toString()
       })
     })
     expect(txRes.ok).toBe(true)
 
     // Fetch projections
-    const today = new Date()
-    const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    const formatDate = (date: Date) => date.toISOString().split('T')[0]
+    const startDate = todayDate
+    const endDate = todayDate.addDays(30)
 
     const projRes = await fetch(
-      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${formatDate(today)}&endDate=${formatDate(in30Days)}`
+      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${startDate.toString()}&endDate=${endDate.toString()}`
     )
     expect(projRes.ok).toBe(true)
 
@@ -133,25 +148,25 @@ describe('Dashboard Features (F030-F033)', () => {
 
   it('F032: should provide projection data for upcoming 30-60 days', async () => {
     // Create an account
+    const todayDate = today()
     const accountRes = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Savings Account',
         initialBalance: 5000,
-        balanceAsOf: new Date().toISOString()
+        balanceAsOf: todayDate.toString()
       })
     })
     expect(accountRes.ok).toBe(true)
     testAccount = await accountRes.json()
 
     // Test 30-day projection
-    const today = new Date()
-    const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    const formatDate = (date: Date) => date.toISOString().split('T')[0]
+    const startDate = todayDate
+    const in30Days = todayDate.addDays(30)
 
     const proj30Res = await fetch(
-      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${formatDate(today)}&endDate=${formatDate(in30Days)}`
+      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${startDate.toString()}&endDate=${in30Days.toString()}`
     )
     expect(proj30Res.ok).toBe(true)
     const proj30Data = await proj30Res.json()
@@ -159,9 +174,9 @@ describe('Dashboard Features (F030-F033)', () => {
     expect(proj30Data.length).toBeLessThanOrEqual(31)
 
     // Test 60-day projection
-    const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
+    const in60Days = todayDate.addDays(60)
     const proj60Res = await fetch(
-      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${formatDate(today)}&endDate=${formatDate(in60Days)}`
+      `${API_BASE}/api/projections?accountId=${testAccount.id}&startDate=${startDate.toString()}&endDate=${in60Days.toString()}`
     )
     expect(proj60Res.ok).toBe(true)
     const proj60Data = await proj60Res.json()
@@ -171,13 +186,14 @@ describe('Dashboard Features (F030-F033)', () => {
 
   it('F033: should filter projections by selected account', async () => {
     // Create two accounts
+    const todayDate = today()
     const account1Res = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Account 1',
         initialBalance: 1000,
-        balanceAsOf: new Date().toISOString()
+        balanceAsOf: todayDate.toString()
       })
     })
     expect(account1Res.ok).toBe(true)
@@ -189,25 +205,24 @@ describe('Dashboard Features (F030-F033)', () => {
       body: JSON.stringify({
         name: 'Account 2',
         initialBalance: 2000,
-        balanceAsOf: new Date().toISOString()
+        balanceAsOf: todayDate.toString()
       })
     })
     expect(account2Res.ok).toBe(true)
     const account2 = await account2Res.json()
 
     // Fetch projections for each account separately
-    const today = new Date()
-    const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    const formatDate = (date: Date) => date.toISOString().split('T')[0]
+    const startDate = todayDate
+    const endDate = todayDate.addDays(30)
 
     const proj1Res = await fetch(
-      `${API_BASE}/api/projections?accountId=${account1.id}&startDate=${formatDate(today)}&endDate=${formatDate(in30Days)}`
+      `${API_BASE}/api/projections?accountId=${account1.id}&startDate=${startDate.toString()}&endDate=${endDate.toString()}`
     )
     expect(proj1Res.ok).toBe(true)
     const proj1Data = await proj1Res.json()
 
     const proj2Res = await fetch(
-      `${API_BASE}/api/projections?accountId=${account2.id}&startDate=${formatDate(today)}&endDate=${formatDate(in30Days)}`
+      `${API_BASE}/api/projections?accountId=${account2.id}&startDate=${startDate.toString()}&endDate=${endDate.toString()}`
     )
     expect(proj2Res.ok).toBe(true)
     const proj2Data = await proj2Res.json()

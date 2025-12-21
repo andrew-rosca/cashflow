@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
 let prisma: PrismaClient
 let adapter: PrismaDataAdapter
@@ -41,28 +42,28 @@ describe('F034: Transaction list filters by selected account', () => {
     const checking = await adapter.createAccount(TEST_USER_ID, {
       name: 'Checking',
       initialBalance: 1000,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     checkingAccountId = checking.id
 
     const savings = await adapter.createAccount(TEST_USER_ID, {
       name: 'Savings',
       initialBalance: 5000,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     savingsAccountId = savings.id
 
     const income = await adapter.createAccount(TEST_USER_ID, {
       name: 'Income',
       initialBalance: 0,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     incomeAccountId = income.id
 
     const expenses = await adapter.createAccount(TEST_USER_ID, {
       name: 'Expenses',
       initialBalance: 0,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     expensesAccountId = expenses.id
 
@@ -72,7 +73,7 @@ describe('F034: Transaction list filters by selected account', () => {
       fromAccountId: incomeAccountId,
       toAccountId: checkingAccountId,
       amount: 2000,
-      date: new Date('2025-01-15'),
+      date: LogicalDate.fromString('2025-01-15'),
       description: 'Paycheck',
     })
 
@@ -81,7 +82,7 @@ describe('F034: Transaction list filters by selected account', () => {
       fromAccountId: checkingAccountId,
       toAccountId: expensesAccountId,
       amount: 1200,
-      date: new Date('2025-01-20'),
+      date: LogicalDate.fromString('2025-01-20'),
       description: 'Rent',
     })
 
@@ -90,7 +91,7 @@ describe('F034: Transaction list filters by selected account', () => {
       fromAccountId: checkingAccountId,
       toAccountId: savingsAccountId,
       amount: 500,
-      date: new Date('2025-01-25'),
+      date: LogicalDate.fromString('2025-01-25'),
       description: 'Transfer to savings',
     })
 
@@ -99,7 +100,7 @@ describe('F034: Transaction list filters by selected account', () => {
       fromAccountId: checkingAccountId,
       toAccountId: expensesAccountId,
       amount: 150,
-      date: new Date('2025-01-28'),
+      date: LogicalDate.fromString('2025-01-28'),
       description: 'Groceries',
     })
 
@@ -108,7 +109,7 @@ describe('F034: Transaction list filters by selected account', () => {
       fromAccountId: savingsAccountId,
       toAccountId: checkingAccountId,
       amount: 300,
-      date: new Date('2025-01-30'),
+      date: LogicalDate.fromString('2025-01-30'),
       description: 'Emergency withdrawal',
     })
   })
@@ -194,7 +195,7 @@ describe('F034: Transaction list filters by selected account', () => {
     const isolated = await adapter.createAccount(TEST_USER_ID, {
       name: 'Isolated Account',
       initialBalance: 0,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
 
     const allTransactions = await adapter.getTransactions(TEST_USER_ID)

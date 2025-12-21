@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
 let prisma: PrismaClient
 let adapter: PrismaDataAdapter
@@ -38,7 +39,7 @@ describe('F027: Inline account creation during transaction entry', () => {
     const newAccount = await adapter.createAccount(TEST_USER_ID, {
       name: 'New Checking Account',
       initialBalance: 1000,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     expect(newAccount.id).toBeDefined()
     expect(newAccount.name).toBe('New Checking Account')
@@ -48,7 +49,7 @@ describe('F027: Inline account creation during transaction entry', () => {
     const toAccount = await adapter.createAccount(TEST_USER_ID, {
       name: 'Expense Account',
       initialBalance: 0,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
 
     // Step 3: Now create transaction using the newly created account
@@ -56,7 +57,7 @@ describe('F027: Inline account creation during transaction entry', () => {
       fromAccountId: newAccount.id, // Using the newly created account
       toAccountId: toAccount.id,
       amount: 50,
-      date: new Date('2025-01-15'),
+      date: LogicalDate.fromString('2025-01-15'),
       description: 'Test transaction with new account',
     })
     expect(transaction.id).toBeDefined()
@@ -70,14 +71,14 @@ describe('F027: Inline account creation during transaction entry', () => {
     const fromAccount = await adapter.createAccount(TEST_USER_ID, {
       name: 'Source Account',
       initialBalance: 1000,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
 
     // Step 2: Simulate creating new account on the fly for "to" side
     const newAccount = await adapter.createAccount(TEST_USER_ID, {
       name: 'New Savings Account',
       initialBalance: 0,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     expect(newAccount.id).toBeDefined()
     expect(newAccount.name).toBe('New Savings Account')
@@ -88,7 +89,7 @@ describe('F027: Inline account creation during transaction entry', () => {
       fromAccountId: fromAccount.id,
       toAccountId: newAccount.id, // Using the newly created account
       amount: 200,
-      date: new Date('2025-01-15'),
+      date: LogicalDate.fromString('2025-01-15'),
       description: 'Transfer to new savings',
     })
     expect(transaction.id).toBeDefined()
@@ -102,7 +103,7 @@ describe('F027: Inline account creation during transaction entry', () => {
     const newAccount = await adapter.createAccount(TEST_USER_ID, {
       name: 'Quick Create Account',
       initialBalance: 500,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     expect(newAccount.id).toBeDefined()
     expect(newAccount.name).toBe('Quick Create Account')
@@ -122,7 +123,7 @@ describe('F027: Inline account creation during transaction entry', () => {
     const newAccount = await adapter.createAccount(TEST_USER_ID, {
       name: 'Minimal Account',
       initialBalance: 0, // Default to 0
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     expect(newAccount.id).toBeDefined()
     expect(newAccount.name).toBe('Minimal Account')

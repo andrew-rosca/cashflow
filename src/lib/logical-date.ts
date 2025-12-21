@@ -239,3 +239,14 @@ export function requireLogicalDate(input: string | LogicalDate | undefined): Log
   return result
 }
 
+/**
+ * Get today's date as a LogicalDate
+ * This is the ONLY place where Date is used - to get the current calendar date
+ * The Date object is immediately converted to LogicalDate to avoid timezone issues
+ */
+export function today(): LogicalDate {
+  // Use Date only to get today's calendar date (client-side only)
+  const now = new Date()
+  return LogicalDate.from(now.getFullYear(), now.getMonth() + 1, now.getDate())
+}
+
