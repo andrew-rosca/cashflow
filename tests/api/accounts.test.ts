@@ -20,37 +20,37 @@ describe('Account API Tests', () => {
     })
   })
 
-  describe('F002: Create tracked account', () => {
-    it('should create a tracked account with initial balance', async () => {
+  describe('F002: Create account', () => {
+    it('should create an account with initial balance and balanceAsOf', async () => {
+      const balanceAsOf = new Date('2025-12-01')
       const account = await adapter.createAccount(TEST_USER_ID, {
         name: 'Test Checking',
-        type: 'tracked',
         initialBalance: 1000,
+        balanceAsOf,
       })
 
       expect(account).toBeDefined()
       expect(account.id).toBeDefined()
       expect(account.userId).toBe(TEST_USER_ID)
       expect(account.name).toBe('Test Checking')
-      expect(account.type).toBe('tracked')
       expect(account.initialBalance).toBe(1000)
+      expect(account.balanceAsOf).toBeDefined()
     })
   })
 
-  describe('F003: Create external account', () => {
-    it('should create an external account with category', async () => {
+  describe('F003: Create account with default balanceAsOf', () => {
+    it('should create an account with balanceAsOf defaulting to today', async () => {
       const account = await adapter.createAccount(TEST_USER_ID, {
-        name: 'Salary',
-        type: 'external',
-        category: 'income',
+        name: 'Savings Account',
+        initialBalance: 500,
+        balanceAsOf: new Date(),
       })
 
       expect(account).toBeDefined()
       expect(account.id).toBeDefined()
       expect(account.userId).toBe(TEST_USER_ID)
-      expect(account.name).toBe('Salary')
-      expect(account.type).toBe('external')
-      expect(account.category).toBe('income')
+      expect(account.name).toBe('Savings Account')
+      expect(account.balanceAsOf).toBeDefined()
     })
   })
 
@@ -61,18 +61,6 @@ describe('Account API Tests', () => {
       expect(Array.isArray(accounts)).toBe(true)
       expect(accounts.length).toBeGreaterThan(0)
     })
-
-    it('should filter by type=tracked', async () => {
-      const accounts = await adapter.getAccounts(TEST_USER_ID, 'tracked')
-      expect(accounts).toBeDefined()
-      expect(accounts.every(a => a.type === 'tracked')).toBe(true)
-    })
-
-    it('should filter by type=external', async () => {
-      const accounts = await adapter.getAccounts(TEST_USER_ID, 'external')
-      expect(accounts).toBeDefined()
-      expect(accounts.every(a => a.type === 'external')).toBe(true)
-    })
   })
 
   describe('F005: Get single account', () => {
@@ -80,14 +68,15 @@ describe('Account API Tests', () => {
       // Create an account first
       const created = await adapter.createAccount(TEST_USER_ID, {
         name: 'Get Test',
-        type: 'tracked',
         initialBalance: 500,
+        balanceAsOf: new Date(),
       })
 
       const account = await adapter.getAccount(TEST_USER_ID, created.id)
       expect(account).toBeDefined()
       expect(account?.id).toBe(created.id)
       expect(account?.name).toBe('Get Test')
+      expect(account?.balanceAsOf).toBeDefined()
     })
 
     it('should return null for non-existent account', async () => {
@@ -100,13 +89,15 @@ describe('Account API Tests', () => {
     it('should update account fields', async () => {
       const created = await adapter.createAccount(TEST_USER_ID, {
         name: 'Update Test',
-        type: 'tracked',
         initialBalance: 1000,
+        balanceAsOf: new Date('2025-12-01'),
       })
 
+      const newBalanceAsOf = new Date('2025-12-15')
       const updated = await adapter.updateAccount(TEST_USER_ID, created.id, {
         name: 'Updated Name',
         initialBalance: 2000,
+        balanceAsOf: newBalanceAsOf,
       })
 
       expect(updated.name).toBe('Updated Name')
@@ -118,7 +109,8 @@ describe('Account API Tests', () => {
     it('should delete account', async () => {
       const created = await adapter.createAccount(TEST_USER_ID, {
         name: 'Delete Test',
-        type: 'external',
+        initialBalance: 0,
+        balanceAsOf: new Date(),
       })
 
       await adapter.deleteAccount(TEST_USER_ID, created.id)

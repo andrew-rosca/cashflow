@@ -20,15 +20,14 @@ describe('Dashboard Features (F030-F033)', () => {
   })
 
   it('F030: should fetch projections for a tracked account', async () => {
-    // Create a tracked account
+    // Create an account
     const accountRes = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         name: 'Checking Account',
-        type: 'tracked',
-        initialBalance: 1000
+        initialBalance: 1000,
+        balanceAsOf: new Date().toISOString()
       })
     })
     expect(accountRes.ok).toBe(true)
@@ -39,7 +38,6 @@ describe('Dashboard Features (F030-F033)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         fromAccountId: testAccount.id,
         toAccountId: testAccount.id,
         amount: 100,
@@ -72,29 +70,27 @@ describe('Dashboard Features (F030-F033)', () => {
   })
 
   it('F031: should identify danger zones (balance <= 0)', async () => {
-    // Create a tracked account with low initial balance
+    // Create an account with low initial balance
     const accountRes = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         name: 'Low Balance Account',
-        type: 'tracked',
-        initialBalance: 100
+        initialBalance: 100,
+        balanceAsOf: new Date().toISOString()
       })
     })
     expect(accountRes.ok).toBe(true)
     testAccount = await accountRes.json()
 
-    // Create external expense account
+    // Create expense account
     const externalRes = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         name: 'Bills',
-        type: 'external',
-        category: 'expense'
+        initialBalance: 0,
+        balanceAsOf: new Date().toISOString()
       })
     })
     expect(externalRes.ok).toBe(true)
@@ -105,7 +101,6 @@ describe('Dashboard Features (F030-F033)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         fromAccountId: testAccount.id,
         toAccountId: externalAccount.id,
         amount: 150,
@@ -137,15 +132,14 @@ describe('Dashboard Features (F030-F033)', () => {
   })
 
   it('F032: should provide projection data for upcoming 30-60 days', async () => {
-    // Create a tracked account
+    // Create an account
     const accountRes = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         name: 'Savings Account',
-        type: 'tracked',
-        initialBalance: 5000
+        initialBalance: 5000,
+        balanceAsOf: new Date().toISOString()
       })
     })
     expect(accountRes.ok).toBe(true)
@@ -176,15 +170,14 @@ describe('Dashboard Features (F030-F033)', () => {
   })
 
   it('F033: should filter projections by selected account', async () => {
-    // Create two tracked accounts
+    // Create two accounts
     const account1Res = await fetch(`${API_BASE}/api/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         name: 'Account 1',
-        type: 'tracked',
-        initialBalance: 1000
+        initialBalance: 1000,
+        balanceAsOf: new Date().toISOString()
       })
     })
     expect(account1Res.ok).toBe(true)
@@ -194,10 +187,9 @@ describe('Dashboard Features (F030-F033)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: TEST_USER_ID,
         name: 'Account 2',
-        type: 'tracked',
-        initialBalance: 2000
+        initialBalance: 2000,
+        balanceAsOf: new Date().toISOString()
       })
     })
     expect(account2Res.ok).toBe(true)

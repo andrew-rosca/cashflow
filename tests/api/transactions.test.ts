@@ -25,13 +25,13 @@ describe('Transaction API Tests', () => {
     // Create test accounts
     const tracked = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',
-      type: 'tracked',
       initialBalance: 1000,
+      balanceAsOf: new Date(),
     })
     const external = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Salary',
-      type: 'external',
-      category: 'income',
+      initialBalance: 0,
+      balanceAsOf: new Date(),
     })
 
     trackedAccountId = tracked.id

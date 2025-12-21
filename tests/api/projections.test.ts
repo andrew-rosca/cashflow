@@ -27,26 +27,28 @@ describe('Projection Engine Tests', () => {
       },
     })
 
-    // Create test accounts
+    // Create test accounts with balanceAsOf set to start of test period
+    const testBalanceDate = new Date('2025-12-01')
+
     const checking = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',
-      type: 'tracked',
       initialBalance: 1000,
+      balanceAsOf: testBalanceDate,
     })
     const savings = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Savings',
-      type: 'tracked',
       initialBalance: 5000,
+      balanceAsOf: testBalanceDate,
     })
     const salary = await adapter.createAccount(TEST_USER_ID, {
       name: 'Salary',
-      type: 'external',
-      category: 'income',
+      initialBalance: 0,
+      balanceAsOf: testBalanceDate,
     })
     const expense = await adapter.createAccount(TEST_USER_ID, {
       name: 'Groceries',
-      type: 'external',
-      category: 'expense',
+      initialBalance: 0,
+      balanceAsOf: testBalanceDate,
     })
 
     checkingAccountId = checking.id
@@ -315,8 +317,8 @@ describe('Projection Engine Tests', () => {
       // Create new account with low balance
       const lowBalanceAccount = await adapter.createAccount(TEST_USER_ID, {
         name: 'Low Balance Account',
-        type: 'tracked',
         initialBalance: 100,
+        balanceAsOf: new Date(),
       })
 
       // Large expense that will cause negative balance
@@ -354,8 +356,8 @@ describe('Projection Engine Tests', () => {
       // Create account with medium balance
       const volatileAccount = await adapter.createAccount(TEST_USER_ID, {
         name: 'Volatile Account',
-        type: 'tracked',
         initialBalance: 500,
+        balanceAsOf: new Date(),
       })
 
       // Multiple transactions causing ups and downs
@@ -404,13 +406,13 @@ describe('Projection Engine Tests', () => {
     it('should handle settlement lag in projections', async () => {
       const account1 = await adapter.createAccount(TEST_USER_ID, {
         name: 'Settlement Test 1',
-        type: 'tracked',
         initialBalance: 1000,
+        balanceAsOf: new Date(),
       })
       const account2 = await adapter.createAccount(TEST_USER_ID, {
         name: 'Settlement Test 2',
-        type: 'tracked',
         initialBalance: 0,
+        balanceAsOf: new Date(),
       })
 
       // Transfer with 3-day settlement

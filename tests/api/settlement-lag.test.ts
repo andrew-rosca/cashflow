@@ -22,16 +22,16 @@ describe('F014: Settlement Lag Tests', () => {
       },
     })
 
-    // Create two tracked accounts for transfers
+    // Create two accounts for transfers
     const checking = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',
-      type: 'tracked',
       initialBalance: 5000,
+      balanceAsOf: new Date(),
     })
     const savings = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Savings',
-      type: 'tracked',
       initialBalance: 10000,
+      balanceAsOf: new Date(),
     })
 
     checkingAccountId = checking.id
