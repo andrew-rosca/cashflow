@@ -226,7 +226,7 @@
         "See list of tracked accounts with balances",
         "See list of external accounts with categories"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F020",
@@ -238,7 +238,7 @@
         "Fill in account name, type, and optional fields",
         "Submit form creates account and updates list"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F021",
@@ -250,7 +250,7 @@
         "Update account fields",
         "Save changes persist and UI updates"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F022",
@@ -262,7 +262,7 @@
         "Confirm deletion in modal",
         "Account is removed from list"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F023",
@@ -274,7 +274,7 @@
         "See tab for one-time transactions",
         "List shows date, from/to accounts, amount, description"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F024",
@@ -286,7 +286,7 @@
         "See tab for recurring transactions",
         "List shows pattern, from/to accounts, amount, description"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F025",
@@ -298,7 +298,7 @@
         "Fill in from/to accounts, amount, date, description",
         "Submit creates transaction and updates list"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F026",
@@ -310,7 +310,7 @@
         "Fill in from/to accounts, amount, recurrence pattern",
         "Submit creates transaction with pattern and updates list"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F027",
@@ -335,7 +335,7 @@
         "Update transaction fields",
         "Save changes persist and UI updates"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F029",
@@ -347,7 +347,7 @@
         "Confirm deletion in modal",
         "Transaction is removed from list"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F030",
