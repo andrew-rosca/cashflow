@@ -7,8 +7,8 @@ import { format, addDays } from 'date-fns'
 interface Account {
   id: string
   name: string
-  type: string
-  initialBalance?: number
+  initialBalance: number
+  balanceAsOf: Date
 }
 
 interface ProjectionDataPoint {
@@ -25,7 +25,7 @@ export default function DashboardTab() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch('/api/accounts?type=tracked')
+      const response = await fetch('/api/accounts')
       if (!response.ok) throw new Error('Failed to fetch accounts')
       const data = await response.json()
       setAccounts(data)

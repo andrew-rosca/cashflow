@@ -5,9 +5,8 @@ import { useState, useEffect } from 'react'
 interface Account {
   id: string
   name: string
-  type: 'tracked' | 'external'
-  initialBalance?: number
-  category?: string
+  initialBalance: number
+  balanceAsOf: Date
 }
 
 export default function AccountsTab() {
@@ -17,9 +16,8 @@ export default function AccountsTab() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
-    type: 'tracked' as 'tracked' | 'external',
     initialBalance: '',
-    category: '',
+    balanceAsOf: new Date().toISOString().split('T')[0],
   })
 
   useEffect(() => {
@@ -43,15 +41,8 @@ export default function AccountsTab() {
     try {
       const payload: any = {
         name: formData.name,
-        type: formData.type,
-      }
-
-      if (formData.type === 'tracked' && formData.initialBalance) {
-        payload.initialBalance = parseFloat(formData.initialBalance)
-      }
-
-      if (formData.type === 'external' && formData.category) {
-        payload.category = formData.category
+        initialBalance: parseFloat(formData.initialBalance),
+        balanceAsOf: new Date(formData.balanceAsOf).toISOString(),
       }
 
       if (editingId) {
@@ -79,9 +70,8 @@ export default function AccountsTab() {
     setEditingId(account.id)
     setFormData({
       name: account.name,
-      type: account.type,
       initialBalance: account.initialBalance?.toString() || '',
-      category: account.category || '',
+      balanceAsOf: new Date(account.balanceAsOf).toISOString().split('T')[0],
     })
     setShowForm(true)
   }
@@ -98,13 +88,10 @@ export default function AccountsTab() {
   }
 
   const resetForm = () => {
-    setFormData({ name: '', type: 'tracked', initialBalance: '', category: '' })
+    setFormData({ name: '', initialBalance: '', balanceAsOf: new Date().toISOString().split('T')[0] })
     setEditingId(null)
     setShowForm(false)
   }
-
-  const trackedAccounts = accounts.filter(a => a.type === 'tracked')
-  const externalAccounts = accounts.filter(a => a.type === 'external')
 
   if (loading) {
     return <div className="text-center py-8">Loading accounts...</div>
@@ -144,48 +131,31 @@ export default function AccountsTab() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Type
+                Initial Balance
               </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'tracked' | 'external' })}
+              <input
+                type="number"
+                step="0.01"
+                value={formData.initialBalance}
+                onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="tracked">Tracked Account</option>
-                <option value="external">External Account</option>
-              </select>
+                placeholder="0.00"
+                required
+              />
             </div>
 
-            {formData.type === 'tracked' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Initial Balance
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.initialBalance}
-                  onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
-              </div>
-            )}
-
-            {formData.type === 'external' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Category
-                </label>
-                <input
-                  type="text"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="e.g., income, expense, groceries"
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Balance As Of
+              </label>
+              <input
+                type="date"
+                value={formData.balanceAsOf}
+                onChange={(e) => setFormData({ ...formData, balanceAsOf: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                required
+              />
+            </div>
 
             <div className="flex gap-2">
               <button
@@ -206,71 +176,31 @@ export default function AccountsTab() {
         </div>
       )}
 
-      {/* Tracked Accounts */}
+      {/* Accounts List */}
       <div>
-        <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">Tracked Accounts</h3>
-        {trackedAccounts.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">No tracked accounts yet.</p>
+        <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">Accounts</h3>
+        {accounts.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No accounts yet.</p>
         ) : (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Initial Balance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Balance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Balance As Of</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {trackedAccounts.map((account) => (
+                {accounts.map((account) => (
                   <tr key={account.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{account.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       ${account.initialBalance?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
-                      <button
-                        onClick={() => handleEdit(account)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(account.id)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* External Accounts */}
-      <div>
-        <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">External Accounts</h3>
-        {externalAccounts.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">No external accounts yet.</p>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {externalAccounts.map((account) => (
-                  <tr key={account.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{account.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {account.category || '-'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {new Date(account.balanceAsOf).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
                       <button

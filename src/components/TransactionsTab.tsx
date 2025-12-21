@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react'
 interface Account {
   id: string
   name: string
-  type: string
+  initialBalance: number
+  balanceAsOf: Date
 }
 
 interface Transaction {
@@ -33,6 +34,12 @@ export default function TransactionsTab() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'onetime' | 'recurring'>('onetime')
+  const [showAccountModal, setShowAccountModal] = useState(false)
+  const [accountModalTarget, setAccountModalTarget] = useState<'from' | 'to' | null>(null)
+  const [newAccountData, setNewAccountData] = useState({
+    name: '',
+    initialBalance: '',
+  })
   const [formData, setFormData] = useState({
     fromAccountId: '',
     toAccountId: '',
@@ -163,6 +170,55 @@ export default function TransactionsTab() {
     setShowForm(false)
   }
 
+  const handleAccountChange = (field: 'from' | 'to', value: string) => {
+    if (value === '__create_new__') {
+      setAccountModalTarget(field)
+      setShowAccountModal(true)
+    } else {
+      setFormData({ ...formData, [`${field}AccountId`]: value })
+    }
+  }
+
+  const handleCreateAccount = async () => {
+    try {
+      const payload = {
+        name: newAccountData.name,
+        initialBalance: parseFloat(newAccountData.initialBalance) || 0,
+      }
+
+      const response = await fetch('/api/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) throw new Error('Failed to create account')
+
+      const createdAccount = await response.json()
+
+      // Refresh accounts list
+      await loadData()
+
+      // Select the newly created account in the form
+      if (accountModalTarget === 'from') {
+        setFormData({ ...formData, fromAccountId: createdAccount.id })
+      } else if (accountModalTarget === 'to') {
+        setFormData({ ...formData, toAccountId: createdAccount.id })
+      }
+
+      // Reset modal state
+      setShowAccountModal(false)
+      setAccountModalTarget(null)
+      setNewAccountData({
+        name: '',
+        initialBalance: '',
+      })
+    } catch (error) {
+      console.error('Failed to create account:', error)
+      alert('Failed to create account. Please try again.')
+    }
+  }
+
   const getAccountName = (id: string) => {
     return accounts.find(a => a.id === id)?.name || 'Unknown'
   }
@@ -232,14 +288,15 @@ export default function TransactionsTab() {
                 </label>
                 <select
                   value={formData.fromAccountId}
-                  onChange={(e) => setFormData({ ...formData, fromAccountId: e.target.value })}
+                  onChange={(e) => handleAccountChange('from', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 >
                   <option value="">Select account...</option>
                   {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
                   ))}
+                  <option value="__create_new__" className="font-semibold text-blue-600 dark:text-blue-400">+ Create New Account</option>
                 </select>
               </div>
 
@@ -249,14 +306,15 @@ export default function TransactionsTab() {
                 </label>
                 <select
                   value={formData.toAccountId}
-                  onChange={(e) => setFormData({ ...formData, toAccountId: e.target.value })}
+                  onChange={(e) => handleAccountChange('to', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 >
                   <option value="">Select account...</option>
                   {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
                   ))}
+                  <option value="__create_new__" className="font-semibold text-blue-600 dark:text-blue-400">+ Create New Account</option>
                 </select>
               </div>
             </div>
@@ -494,6 +552,71 @@ export default function TransactionsTab() {
           </div>
         )}
       </div>
+
+      {/* Inline Account Creation Modal */}
+      {showAccountModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white">
+              Create New Account
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Account Name
+                </label>
+                <input
+                  type="text"
+                  value={newAccountData.name}
+                  onChange={(e) => setNewAccountData({ ...newAccountData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="e.g., Groceries, Main Bank"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Initial Balance
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newAccountData.initialBalance}
+                  onChange={(e) => setNewAccountData({ ...newAccountData, initialBalance: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                type="button"
+                onClick={handleCreateAccount}
+                disabled={!newAccountData.name}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Create Account
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAccountModal(false)
+                  setAccountModalTarget(null)
+                  setNewAccountData({
+                    name: '',
+                    initialBalance: '',
+                  })
+                }}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
