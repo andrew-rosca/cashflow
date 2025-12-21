@@ -389,6 +389,55 @@ Current feature status: 13/83 complete (15.7%)
 
 ---
 
+### Session 3 - Settlement Lag Implementation (December 20, 2025)
+
+**Status**: Settlement lag feature complete with tests
+
+**Completed Features:**
+- ✅ F014: Transaction with settlement lag between tracked accounts
+
+**Changes Made:**
+
+1. **Created Settlement Lag Test Suite**
+   - Added `tests/api/settlement-lag.test.ts` with 5 comprehensive tests
+   - Tests cover:
+     - Creating transactions with settlementDays > 0
+     - Retrieving transactions with settlement lag
+     - Updating settlementDays on existing transactions
+     - Handling transactions with no settlement lag (undefined)
+     - Handling zero settlementDays (instant settlement)
+
+2. **Verified Existing Implementation**
+   - Confirmed `settlementDays` field exists in Prisma schema (Transaction model, line 85)
+   - Confirmed API routes already support passing settlementDays
+   - Confirmed PrismaDataAdapter properly handles settlementDays in CRUD operations
+
+**Testing Coverage:**
+- All 22 tests passing (17 existing + 5 new settlement lag tests)
+- Settlement lag can be set, retrieved, and updated
+- Supports integer values (0, 3, 5, etc.) and undefined (no lag)
+
+**What Works:**
+- Creating transfers with settlement lag between tracked accounts
+- Storing and retrieving settlementDays value
+- Updating settlement lag on existing transactions
+- The field is properly optional (can be undefined or 0 for instant transfers)
+
+**Next Steps:**
+1. Implement projection engine (F015-F018) - this is where settlement lag will be used
+   - F015: Calculate daily balances for tracked accounts
+   - F016: Materialize recurring transactions
+   - F017: Handle recurring with end date/occurrences
+   - F018: Identify dates where balance <= 0
+   - Settlement lag will affect when debits and credits appear in projections
+
+**Notes:**
+- Settlement lag functionality is complete at the data layer
+- The projection engine will use settlementDays to split transfers into separate debit/credit events
+- Debit will occur on `date`, credit will occur on `date + settlementDays`
+
+---
+
 ## Notes
 
 - Currently using stub user ID ("user-1") in API routes

@@ -166,7 +166,7 @@
         "Debit happens on date",
         "Credit happens on date + settlementDays"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",
