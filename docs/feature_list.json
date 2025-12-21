@@ -1050,6 +1050,32 @@
         "Publish to App Store and Google Play"
       ],
       "passes": false
+    },
+    {
+      "id": "F084",
+      "category": "future",
+      "priority": 8,
+      "description": "Variable recurring transaction amounts",
+      "steps": [
+        "Add support for recurring transactions with variable amounts",
+        "Allow user to update amount for next occurrence only",
+        "UI shows reminder to update amount before due date",
+        "Useful for bills that vary month-to-month (e.g., credit card payments)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F085",
+      "category": "future",
+      "priority": 9,
+      "description": "Transaction notes/memo field",
+      "steps": [
+        "Add notes/memo field to transaction model",
+        "Display notes in transaction list UI",
+        "Allow editing notes field in transaction form",
+        "Use notes to categorize expenses (e.g., 'Rent', 'Groceries') when using generic external accounts"
+      ],
+      "passes": false
     }
   ]
 }
