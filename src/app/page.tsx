@@ -128,7 +128,10 @@ export default function Home() {
       const allProjections: ProjectionData[] = []
       for (const account of accounts) {
         const response = await fetch(
-          `/api/projections?accountId=${account.id}&startDate=${format(today, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
+          `/api/projections?accountId=${account.id}&startDate=${format(today, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}&_t=${Date.now()}`,
+          {
+            cache: 'no-store',
+          }
         )
         if (!response.ok) {
           console.error(`Failed to load projections for account ${account.id}:`, response.status, response.statusText)
@@ -221,19 +224,27 @@ export default function Home() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ date: localDate.toISOString() }),
         })
-        loadTransactions()
+        await loadTransactions()
+        // Reload projections after transaction date is updated
+        if (accounts.length > 0) {
+          await loadProjections()
+        }
       } else if (parts[0] === 'tx' && parts[1] === 'amount') {
         const txId = parts[2]
         const tx = transactions.find(t => t.id === txId)
         if (tx) {
-          // Always store as positive amount in API
-          const newAmount = Math.abs(parseFloat(editValue) || 0)
+          // Preserve the sign that the user entered
+          const newAmount = parseFloat(editValue) || 0
           await fetch(`/api/transactions/${txId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: newAmount }),
           })
-          loadTransactions()
+          await loadTransactions()
+          // Reload projections after transaction amount is updated
+          if (accounts.length > 0) {
+            await loadProjections()
+          }
         }
       } else if (parts[0] === 'tx' && parts[1] === 'notes') {
         const txId = parts[2]
@@ -242,7 +253,11 @@ export default function Home() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ description: editValue }),
         })
-        loadTransactions()
+        await loadTransactions()
+        // Note: Description changes don't affect projections, but we reload for consistency
+        if (accounts.length > 0) {
+          await loadProjections()
+        }
       }
     } catch (error) {
       console.error('Failed to update:', error)
@@ -298,6 +313,22 @@ export default function Home() {
       }
     }
     closeAccountDialog()
+  }
+
+  const handleTransactionDelete = async () => {
+    if (selectedTransactionId) {
+      try {
+        await fetch(`/api/transactions/${selectedTransactionId}`, { method: 'DELETE' })
+        await loadTransactions()
+        // Explicitly reload projections after transactions are updated
+        if (accounts.length > 0) {
+          await loadProjections()
+        }
+        closeTransactionDialog()
+      } catch (error) {
+        console.error('Failed to delete transaction:', error)
+      }
+    }
   }
 
   const handleAddAccount = async () => {
@@ -433,7 +464,11 @@ export default function Home() {
           body: JSON.stringify(payload),
         })
       }
-      loadTransactions()
+      await loadTransactions()
+      // Explicitly reload projections after transactions are updated
+      if (accounts.length > 0) {
+        await loadProjections()
+      }
       closeTransactionDialog()
     } catch (error) {
       console.error('Failed to save transaction:', error)
@@ -486,19 +521,22 @@ export default function Home() {
     const fromAccount = accounts.find(a => a.id === tx.fromAccountId)
     const toAccount = accounts.find(a => a.id === tx.toAccountId)
     
-    // If both are tracked accounts, it's a transfer - show as negative from source
-    if (fromAccount && toAccount) {
+    // If both are tracked accounts and they're different, it's a transfer - show as negative from source
+    if (fromAccount && toAccount && tx.fromAccountId !== tx.toAccountId) {
       return -tx.amount
     }
-    // If from tracked account, it's an outflow (negative)
+    // If from tracked account (and not a transfer), it's an outflow (negative)
+    // But preserve the sign if amount is already negative (user entered negative expense)
     if (fromAccount) {
-      return -tx.amount
+      // If amount is already negative, it's an expense - preserve the sign
+      // If amount is positive, negate it to show as outflow
+      return tx.amount < 0 ? tx.amount : -tx.amount
     }
     // If to tracked account, it's an inflow (positive)
     if (toAccount) {
       return tx.amount
     }
-    // Default to positive
+    // Default: preserve the sign of the amount (user's intent)
     return tx.amount
   }
 
@@ -765,7 +803,7 @@ export default function Home() {
                             className={`text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded ${
                               getTransactionAmount(tx) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
                             }`}
-                            onClick={() => handleCellClick(`tx-amount-${tx.id}`, Math.abs(getTransactionAmount(tx)).toString())}
+                            onClick={() => handleCellClick(`tx-amount-${tx.id}`, tx.amount.toString())}
                           >
                             {formatNumber(getTransactionAmount(tx))}
                           </span>
@@ -908,9 +946,23 @@ export default function Home() {
               className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                {selectedTransactionId ? 'Edit Transaction' : 'Add Transaction'}
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {selectedTransactionId ? 'Edit Transaction' : 'Add Transaction'}
+                </h3>
+                {selectedTransactionId && (
+                  <button
+                    type="button"
+                    onClick={handleTransactionDelete}
+                    className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    title="Delete transaction"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
+              </div>
               <form onSubmit={handleTransactionSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

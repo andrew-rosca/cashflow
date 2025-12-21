@@ -18,7 +18,14 @@ export async function GET(request: NextRequest) {
       endDate,
     })
 
-    return NextResponse.json(projections)
+    // Prevent caching to ensure projections are always fresh
+    return NextResponse.json(projections, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    })
   } catch (error) {
     console.error('Error fetching projections:', error)
     return NextResponse.json({ error: 'Failed to fetch projections' }, { status: 500 })

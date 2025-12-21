@@ -59,41 +59,43 @@ describe('Transaction Amount Input', () => {
       expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/accounts'))
     })
 
-    // Find and click the add transaction button
-    const addButton = screen.getByRole('button', { name: /add|new|transaction/i }) || 
-                     screen.getByText(/\+/) ||
-                     document.querySelector('button[aria-label*="transaction"]')
-    
-    if (addButton) {
-      await user.click(addButton)
-    } else {
-      // Try to find the transaction dialog trigger
-      const transactionTriggers = screen.queryAllByText(/transaction/i)
-      if (transactionTriggers.length > 0) {
-        await user.click(transactionTriggers[0])
-      }
-    }
-
-    // Wait for dialog to open
+    // Find and click the "+" button to add transaction (it's in the Upcoming Transactions section)
+    // There might be multiple "+" buttons, so find the one in the Upcoming Transactions section
     await waitFor(() => {
-      const amountInput = screen.queryByLabelText(/amount/i) || 
-                         screen.queryByPlaceholderText(/amount/i) ||
-                         document.querySelector('input[name="amount"]')
+      const upcomingSection = screen.getByText('Upcoming Transactions')
+      expect(upcomingSection).toBeInTheDocument()
+    })
+    
+    // Find the "+" button that's a sibling or near the "Upcoming Transactions" heading
+    const upcomingHeading = screen.getByText('Upcoming Transactions')
+    const parent = upcomingHeading.parentElement
+    const addButton = parent?.querySelector('button') || screen.getAllByText('+')[0]
+    await user.click(addButton)
+
+    // Wait for dialog to open and find the amount input
+    await waitFor(() => {
+      const amountInput = document.querySelector('input[name="amount"]')
       expect(amountInput).toBeInTheDocument()
     })
 
     // Find the amount input
-    const amountInput = screen.getByLabelText(/amount/i) || 
-                       screen.getByPlaceholderText(/amount/i) ||
-                       document.querySelector('input[name="amount"]') as HTMLInputElement
+    const amountInput = document.querySelector('input[name="amount"]') as HTMLInputElement
 
     // Enter a negative amount
     await user.clear(amountInput)
     await user.type(amountInput, '-100')
 
-    // Find and submit the form
-    const submitButton = screen.getByRole('button', { name: /save|submit|create|add transaction/i })
-    await user.click(submitButton)
+    // Find and submit the form - the button might be "Save" or "Add Transaction"
+    await waitFor(() => {
+      const submitButton = screen.queryByRole('button', { name: /save/i }) ||
+                          screen.queryByRole('button', { name: /add transaction/i }) ||
+                          document.querySelector('form button[type="submit"]')
+      expect(submitButton).toBeInTheDocument()
+    })
+    const submitButton = screen.queryByRole('button', { name: /save/i }) ||
+                        screen.queryByRole('button', { name: /add transaction/i }) ||
+                        document.querySelector('form button[type="submit"]') as HTMLButtonElement
+    await user.click(submitButton!)
 
     // Wait for the POST request
     await waitFor(() => {

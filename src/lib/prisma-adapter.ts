@@ -238,7 +238,10 @@ export class PrismaDataAdapter implements DataAdapter {
           this.addTransactionEvents(events, occurrence, accounts)
         }
       } else {
-        // Add one-time transaction
+        // For one-time transactions, include all of them
+        // The projection loop will only process dates within the range,
+        // so transactions outside the range won't affect the projection
+        // but transactions within the range will be included
         this.addTransactionEvents(events, tx, accounts)
       }
     }
@@ -359,32 +362,54 @@ export class PrismaDataAdapter implements DataAdapter {
     const toAccount = trackedAccounts.find(a => a.id === tx.toAccountId)
     const settlementDays = tx.settlementDays || 0
 
-    // Debit event (money leaves fromAccount)
-    if (fromAccount) {
+    // Normalize transaction date to midnight to ensure consistent date comparison
+    const txDate = new Date(tx.date)
+    txDate.setHours(0, 0, 0, 0)
+    const normalizedDate = txDate
+
+    // If both accounts are the same (self-transfer or expense/income), apply the amount directly
+    // This represents a direct change to the account balance
+    if (fromAccount && toAccount && tx.fromAccountId === tx.toAccountId) {
+      // Same account: apply the transaction amount directly (preserve sign)
+      // Negative amount = expense (outflow), positive amount = income (inflow)
       events.push({
-        date: new Date(tx.date),
+        date: normalizedDate,
         accountId: fromAccount.id,
-        amount: -tx.amount, // negative = debit
+        amount: tx.amount, // Use amount directly, preserving sign
       })
-    }
+    } else {
+      // Different accounts: split into debit and credit
+      // Debit event (money leaves fromAccount)
+      if (fromAccount) {
+        events.push({
+          date: normalizedDate,
+          accountId: fromAccount.id,
+          amount: -tx.amount, // negative = debit
+        })
+      }
 
-    // Credit event (money arrives at toAccount)
-    if (toAccount) {
-      const creditDate = new Date(tx.date)
-      creditDate.setDate(creditDate.getDate() + settlementDays)
-
-      events.push({
-        date: creditDate,
-        accountId: toAccount.id,
-        amount: tx.amount, // positive = credit
-      })
+      // Credit event (money arrives at toAccount)
+      if (toAccount) {
+        const creditDate = new Date(tx.date)
+        creditDate.setHours(0, 0, 0, 0)
+        creditDate.setDate(creditDate.getDate() + settlementDays)
+        events.push({
+          date: creditDate,
+          accountId: toAccount.id,
+          amount: tx.amount, // positive = credit
+        })
+      }
     }
   }
 
   private isSameDay(date1: Date, date2: Date): boolean {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate()
+    // Normalize both dates to midnight for comparison
+    // This handles timezone differences by comparing the date components
+    const d1 = new Date(date1)
+    d1.setHours(0, 0, 0, 0)
+    const d2 = new Date(date2)
+    d2.setHours(0, 0, 0, 0)
+    return d1.getTime() === d2.getTime()
   }
 
   private getDaysInMonth(date: Date): number {
