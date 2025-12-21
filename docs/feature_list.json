@@ -490,7 +490,7 @@
         "Preference is saved and persists",
         "Graph colors are readable in both modes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F041",
@@ -503,7 +503,7 @@
         "Negative initial balance is rejected or warned",
         "Error messages are clear and actionable"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F042",

@@ -14,6 +14,7 @@ export default function AccountsTab() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [errors, setErrors] = useState<{ name?: string; initialBalance?: string; balanceAsOf?: string }>({})
   const [formData, setFormData] = useState({
     name: '',
     initialBalance: '',
@@ -36,33 +37,79 @@ export default function AccountsTab() {
     }
   }
 
+  const validateForm = (): boolean => {
+    const newErrors: { name?: string; initialBalance?: string; balanceAsOf?: string } = {}
+
+    // Validate name
+    if (!formData.name.trim()) {
+      newErrors.name = 'Account name is required'
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Account name must be at least 2 characters'
+    } else if (formData.name.trim().length > 100) {
+      newErrors.name = 'Account name must be less than 100 characters'
+    }
+
+    // Validate initial balance
+    if (!formData.initialBalance) {
+      newErrors.initialBalance = 'Initial balance is required'
+    } else {
+      const balance = parseFloat(formData.initialBalance)
+      if (isNaN(balance)) {
+        newErrors.initialBalance = 'Initial balance must be a valid number'
+      }
+    }
+
+    // Validate balance as of date
+    if (!formData.balanceAsOf) {
+      newErrors.balanceAsOf = 'Balance as of date is required'
+    } else {
+      const date = new Date(formData.balanceAsOf)
+      if (isNaN(date.getTime())) {
+        newErrors.balanceAsOf = 'Invalid date format'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate form
+    if (!validateForm()) {
+      return
+    }
+
     try {
       const payload: any = {
-        name: formData.name,
+        name: formData.name.trim(),
         initialBalance: parseFloat(formData.initialBalance),
         balanceAsOf: new Date(formData.balanceAsOf).toISOString(),
       }
 
-      if (editingId) {
-        await fetch(`/api/accounts/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-      } else {
-        await fetch('/api/accounts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
+      const response = editingId
+        ? await fetch(`/api/accounts/${editingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+        : await fetch('/api/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to save account' }))
+        throw new Error(errorData.message || 'Failed to save account')
       }
 
       resetForm()
       loadAccounts()
     } catch (error) {
       console.error('Failed to save account:', error)
+      setErrors({ name: error instanceof Error ? error.message : 'Failed to save account' })
     }
   }
 
@@ -89,6 +136,7 @@ export default function AccountsTab() {
 
   const resetForm = () => {
     setFormData({ name: '', initialBalance: '', balanceAsOf: new Date().toISOString().split('T')[0] })
+    setErrors({})
     setEditingId(null)
     setShowForm(false)
   }
@@ -123,10 +171,20 @@ export default function AccountsTab() {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value })
+                  if (errors.name) setErrors({ ...errors, name: undefined })
+                }}
+                className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  errors.name
+                    ? 'border-red-500 dark:border-red-400'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 required
               />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
+              )}
             </div>
 
             <div>
@@ -137,11 +195,21 @@ export default function AccountsTab() {
                 type="number"
                 step="0.01"
                 value={formData.initialBalance}
-                onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                onChange={(e) => {
+                  setFormData({ ...formData, initialBalance: e.target.value })
+                  if (errors.initialBalance) setErrors({ ...errors, initialBalance: undefined })
+                }}
+                className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  errors.initialBalance
+                    ? 'border-red-500 dark:border-red-400'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 placeholder="0.00"
                 required
               />
+              {errors.initialBalance && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.initialBalance}</p>
+              )}
             </div>
 
             <div>
@@ -151,10 +219,20 @@ export default function AccountsTab() {
               <input
                 type="date"
                 value={formData.balanceAsOf}
-                onChange={(e) => setFormData({ ...formData, balanceAsOf: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                onChange={(e) => {
+                  setFormData({ ...formData, balanceAsOf: e.target.value })
+                  if (errors.balanceAsOf) setErrors({ ...errors, balanceAsOf: undefined })
+                }}
+                className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  errors.balanceAsOf
+                    ? 'border-red-500 dark:border-red-400'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 required
               />
+              {errors.balanceAsOf && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.balanceAsOf}</p>
+              )}
             </div>
 
             <div className="flex gap-2">

@@ -37,6 +37,15 @@ export default function TransactionsTab() {
   const [filterAccountId, setFilterAccountId] = useState<string>('')
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [accountModalTarget, setAccountModalTarget] = useState<'from' | 'to' | null>(null)
+  const [errors, setErrors] = useState<{
+    fromAccountId?: string
+    toAccountId?: string
+    amount?: string
+    date?: string
+    settlementDays?: string
+    dayOfWeek?: string
+    dayOfMonth?: string
+  }>({})
   const [newAccountData, setNewAccountData] = useState({
     name: '',
     initialBalance: '',
@@ -76,8 +85,83 @@ export default function TransactionsTab() {
     }
   }
 
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {}
+
+    // Validate from account
+    if (!formData.fromAccountId) {
+      newErrors.fromAccountId = 'From account is required'
+    }
+
+    // Validate to account
+    if (!formData.toAccountId) {
+      newErrors.toAccountId = 'To account is required'
+    }
+
+    // Validate from and to are different
+    if (formData.fromAccountId && formData.toAccountId && formData.fromAccountId === formData.toAccountId) {
+      newErrors.toAccountId = 'From and To accounts must be different'
+    }
+
+    // Validate amount
+    if (!formData.amount) {
+      newErrors.amount = 'Amount is required'
+    } else {
+      const amount = parseFloat(formData.amount)
+      if (isNaN(amount)) {
+        newErrors.amount = 'Amount must be a valid number'
+      } else if (amount <= 0) {
+        newErrors.amount = 'Amount must be greater than zero'
+      }
+    }
+
+    // Validate date
+    if (!formData.date) {
+      newErrors.date = 'Date is required'
+    } else {
+      const date = new Date(formData.date)
+      if (isNaN(date.getTime())) {
+        newErrors.date = 'Invalid date format'
+      }
+    }
+
+    // Validate settlement days
+    if (formData.settlementDays) {
+      const days = parseInt(formData.settlementDays)
+      if (isNaN(days) || days < 0) {
+        newErrors.settlementDays = 'Settlement days must be a non-negative number'
+      }
+    }
+
+    // Validate recurring-specific fields
+    if (formData.isRecurring) {
+      if (formData.frequency === 'weekly' && formData.dayOfWeek) {
+        const dow = parseInt(formData.dayOfWeek)
+        if (isNaN(dow) || dow < 0 || dow > 6) {
+          newErrors.dayOfWeek = 'Day of week must be between 0 (Sunday) and 6 (Saturday)'
+        }
+      }
+
+      if (formData.frequency === 'monthly' && formData.dayOfMonth) {
+        const dom = parseInt(formData.dayOfMonth)
+        if (isNaN(dom) || dom < 1 || dom > 31) {
+          newErrors.dayOfMonth = 'Day of month must be between 1 and 31'
+        }
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate form
+    if (!validateForm()) {
+      return
+    }
+
     try {
       const payload: any = {
         fromAccountId: formData.fromAccountId,

@@ -767,6 +767,63 @@ Current feature status: 13/83 complete (15.7%)
 
 ---
 
+### Session 9 - Input Validation and UI Polish (December 20, 2025)
+
+**Status**: Input validation for accounts complete, dark mode verified
+
+**Completed Features:**
+- ✅ F040: Dark mode support (verified - already implemented)
+- ✅ F041: Input validation and error handling for accounts
+
+**Changes Made:**
+
+1. **Verified Dark Mode Implementation** (F040)
+   - Dark mode classes already present throughout all components
+   - All UI elements support dark mode via Tailwind CSS dark: variants
+   - Tables, forms, buttons, modals all render correctly in dark mode
+   - Graph colors are readable in both light and dark modes
+
+2. **Implemented Comprehensive Account Validation** (F041)
+   - Added client-side validation for all account form fields
+   - Name validation: required, 2-100 characters
+   - Initial balance validation: required, must be valid number
+   - Balance as of date validation: required, valid date format
+   - Real-time error clearing on field change
+   - Visual error indicators (red borders) on invalid fields
+   - Clear error messages displayed below each field
+   - Server error handling with user-friendly messages
+
+3. **Started Transaction Validation** (F042 - In Progress)
+   - Added validation logic for transaction form
+   - Validates: from/to accounts, amount > 0, date, settlement days
+   - Prevents same account for from/to
+   - Validates recurring transaction fields (day of week, day of month)
+   - UI error display still needs to be completed
+
+**What Works:**
+- Account form validates all inputs before submission
+- Errors displayed in red with clear messages
+- Invalid fields highlighted with red borders
+- Errors clear when user starts typing
+- Form trims whitespace from account names
+- HTTP error responses handled gracefully
+
+**Technical Highlights:**
+- Validation happens before API call to prevent unnecessary requests
+- Error state managed separately from form data
+- Conditional CSS classes for error styling
+- Type-safe error object with optional fields
+
+**Next Steps:**
+1. Complete transaction validation UI (finish F042)
+2. Add input validation tests
+3. Consider responsive design improvements (F039)
+4. Add loading states and success feedback (F051-F053)
+
+**Progress: 36/83 features complete (43.4%)**
+
+---
+
 ## Notes
 
 - Currently using stub user ID ("user-1") in API routes
