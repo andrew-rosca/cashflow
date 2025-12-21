@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
-const prisma = new PrismaClient()
-const adapter = new PrismaDataAdapter()
+let prisma: PrismaClient
+let adapter: PrismaDataAdapter
 const TEST_USER_ID = 'test-user-settlement'
 
 describe('F014: Settlement Lag Tests', () => {
@@ -11,6 +12,9 @@ describe('F014: Settlement Lag Tests', () => {
   let savingsAccountId: string
 
   beforeAll(async () => {
+    // Create PrismaClient after DATABASE_URL is set by vitest.setup.ts
+    prisma = new PrismaClient()
+    adapter = new PrismaDataAdapter(prisma)
     // Create test user
     await prisma.user.upsert({
       where: { id: TEST_USER_ID },
@@ -26,12 +30,12 @@ describe('F014: Settlement Lag Tests', () => {
     const checking = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',
       initialBalance: 5000,
-      balanceAsOf: new Date(),
+      balanceAsOf: LogicalDate.fromString('2025-12-01'),
     })
     const savings = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Savings',
       initialBalance: 10000,
-      balanceAsOf: new Date(),
+      balanceAsOf: LogicalDate.fromString('2025-12-01'),
     })
 
     checkingAccountId = checking.id
@@ -43,7 +47,7 @@ describe('F014: Settlement Lag Tests', () => {
       fromAccountId: checkingAccountId,
       toAccountId: savingsAccountId,
       amount: 1000,
-      date: new Date('2025-12-20'),
+      date: LogicalDate.fromString('2025-12-20'),
       settlementDays: 3,
       description: 'ACH transfer with 3-day settlement',
     })
@@ -61,7 +65,7 @@ describe('F014: Settlement Lag Tests', () => {
       fromAccountId: savingsAccountId,
       toAccountId: checkingAccountId,
       amount: 500,
-      date: new Date('2025-12-25'),
+      date: LogicalDate.fromString('2025-12-25'),
       settlementDays: 5,
       description: 'Check deposit with 5-day hold',
     })
@@ -78,7 +82,7 @@ describe('F014: Settlement Lag Tests', () => {
       fromAccountId: checkingAccountId,
       toAccountId: savingsAccountId,
       amount: 750,
-      date: new Date('2025-12-28'),
+      date: LogicalDate.fromString('2025-12-28'),
       settlementDays: 2,
     })
 
@@ -94,7 +98,7 @@ describe('F014: Settlement Lag Tests', () => {
       fromAccountId: checkingAccountId,
       toAccountId: savingsAccountId,
       amount: 200,
-      date: new Date('2025-12-22'),
+      date: LogicalDate.fromString('2025-12-22'),
       description: 'Instant transfer',
     })
 
@@ -107,7 +111,7 @@ describe('F014: Settlement Lag Tests', () => {
       fromAccountId: savingsAccountId,
       toAccountId: checkingAccountId,
       amount: 150,
-      date: new Date('2025-12-23'),
+      date: LogicalDate.fromString('2025-12-23'),
       settlementDays: 0,
       description: 'Same-day transfer',
     })

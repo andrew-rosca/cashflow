@@ -1,16 +1,19 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
-// Create PrismaClient after DATABASE_URL is set in vitest.setup.ts
-const prisma = new PrismaClient()
-const adapter = new PrismaDataAdapter()
+let prisma: PrismaClient
+let adapter: PrismaDataAdapter
 const TEST_USER_ID = 'test-user-negative-api'
 
 describe('Transaction API - Negative Amount Bug', () => {
   let accountId: string
 
   beforeAll(async () => {
+    // Create PrismaClient after DATABASE_URL is set by vitest.setup.ts
+    prisma = new PrismaClient()
+    adapter = new PrismaDataAdapter(prisma)
     // Create test user
     await prisma.user.upsert({
       where: { id: TEST_USER_ID },
@@ -26,7 +29,7 @@ describe('Transaction API - Negative Amount Bug', () => {
     const account = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',
       initialBalance: 1000,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     accountId = account.id
   })
@@ -44,7 +47,7 @@ describe('Transaction API - Negative Amount Bug', () => {
       fromAccountId: accountId,
       toAccountId: accountId,
       amount: negativeAmount,
-      date: new Date('2025-01-15'),
+      date: LogicalDate.fromString('2025-01-15'),
       description: 'Test expense',
     })
 
@@ -63,7 +66,7 @@ describe('Transaction API - Negative Amount Bug', () => {
       fromAccountId: accountId,
       toAccountId: accountId,
       amount: parsedAmount, // This is what the API route does: parseFloat(string)
-      date: new Date('2025-01-15'),
+      date: LogicalDate.fromString('2025-01-15'),
       description: 'Test expense',
     })
 
@@ -78,7 +81,7 @@ describe('Transaction API - Negative Amount Bug', () => {
       fromAccountId: accountId,
       toAccountId: accountId,
       amount: 50,
-      date: new Date('2025-01-15'),
+      date: LogicalDate.fromString('2025-01-15'),
       description: 'Initial transaction',
     })
 

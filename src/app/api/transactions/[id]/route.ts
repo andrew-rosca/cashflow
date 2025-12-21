@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
 const getCurrentUserId = () => 'user-1' // TODO: Replace with actual auth
 
@@ -15,7 +16,19 @@ export async function GET(
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
-    return NextResponse.json(transaction)
+    // Convert LogicalDate objects to calendar date strings (YYYY-MM-DD)
+    const response = {
+      ...transaction,
+      date: transaction.date.toString(),
+      ...(transaction.recurrence?.endDate && {
+        recurrence: {
+          ...transaction.recurrence,
+          endDate: transaction.recurrence.endDate.toString(),
+        },
+      }),
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error fetching transaction:', error)
     return NextResponse.json({ error: 'Failed to fetch transaction' }, { status: 500 })
@@ -35,23 +48,31 @@ export async function PUT(
       body.amount = typeof body.amount === 'string' ? parseFloat(body.amount) : Number(body.amount)
     }
 
-    // Parse date as local date to avoid timezone shifts
+    // Convert calendar date strings (YYYY-MM-DD) to LogicalDate
     if (body.date) {
-      const dateStr = typeof body.date === 'string' ? body.date : body.date.toISOString()
-      // Extract date part and create at local midnight
-      const dateOnly = dateStr.split('T')[0]
-      body.date = new Date(dateOnly + 'T00:00:00')
+      body.date = LogicalDate.fromString(body.date)
     }
     
     // Handle recurrence endDate similarly
     if (body.recurrence?.endDate) {
-      const dateStr = typeof body.recurrence.endDate === 'string' ? body.recurrence.endDate : body.recurrence.endDate.toISOString()
-      const dateOnly = dateStr.split('T')[0]
-      body.recurrence.endDate = new Date(dateOnly + 'T00:00:00')
+      body.recurrence.endDate = LogicalDate.fromString(body.recurrence.endDate)
     }
 
     const transaction = await dataAdapter.updateTransaction(userId, params.id, body)
-    return NextResponse.json(transaction)
+    
+    // Convert response back to calendar date string (YYYY-MM-DD)
+    const response = {
+      ...transaction,
+      date: transaction.date.toString(),
+      ...(transaction.recurrence?.endDate && {
+        recurrence: {
+          ...transaction.recurrence,
+          endDate: transaction.recurrence.endDate.toString(),
+        },
+      }),
+    }
+    
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error updating transaction:', error)
     return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })

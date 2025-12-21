@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
 const getCurrentUserId = () => 'user-1' // TODO: Replace with actual auth
 
@@ -9,8 +10,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     
     const accountId = searchParams.get('accountId') ?? undefined
-    const startDate = searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : new Date()
-    const endDate = searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days default
+    // Require explicit date parameters - no "today" concept on server
+    const startDateParam = searchParams.get('startDate')
+    const endDateParam = searchParams.get('endDate')
+    
+    if (!startDateParam || !endDateParam) {
+      return NextResponse.json(
+        { error: 'startDate and endDate query parameters are required' },
+        { status: 400 }
+      )
+    }
+    
+    const startDate = LogicalDate.fromString(startDateParam)
+    const endDate = LogicalDate.fromString(endDateParam)
 
     const projections = await dataAdapter.getProjections(userId, {
       accountId,
@@ -18,8 +30,14 @@ export async function GET(request: NextRequest) {
       endDate,
     })
 
+    // Convert LogicalDate objects to calendar date strings (YYYY-MM-DD) for the response
+    const projectionsWithPlainDates = projections.map(proj => ({
+      ...proj,
+      date: proj.date.toString(),
+    }))
+
     // Prevent caching to ensure projections are always fresh
-    return NextResponse.json(projections, {
+    return NextResponse.json(projectionsWithPlainDates, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
         'Pragma': 'no-cache',

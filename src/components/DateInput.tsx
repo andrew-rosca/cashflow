@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { format, parse, isValid, startOfMonth, endOfMonth, getDaysInMonth } from 'date-fns'
+import { LogicalDate } from '@/lib/logical-date'
 
 interface DateInputProps {
-  value: Date | string
-  onChange: (date: Date) => void
+  value: LogicalDate | string
+  onChange: (date: LogicalDate) => void
   onBlur?: () => void
   className?: string
   placeholder?: string
@@ -33,28 +33,17 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
   const monthInputRef = useRef<HTMLInputElement>(null)
   const yearInputRef = useRef<HTMLInputElement>(null)
 
-  // Parse initial value
+  // Parse initial value to LogicalDate
   useEffect(() => {
-    let date: Date
-    if (typeof value === 'string') {
-      // If it's a string, extract date part and parse as UTC date to avoid timezone shifts
-      const dateOnly = value.split('T')[0] // Get YYYY-MM-DD part
-      const [year, month, day] = dateOnly.split('-').map(Number)
-      date = new Date(Date.UTC(year, month - 1, day)) // Create at UTC midnight
-    } else {
-      // If it's a Date object, extract date components from UTC to avoid timezone shifts
-      // Use UTC methods to get the date components that were originally stored
-      const year = value.getUTCFullYear()
-      const month = value.getUTCMonth()
-      const day = value.getUTCDate()
-      date = new Date(Date.UTC(year, month, day))
-    }
-    if (isValid(date)) {
-      // Use UTC methods to extract date components for display
-      const monthName = MONTHS[date.getUTCMonth()]
-      setDay(String(date.getUTCDate()).padStart(2, '0'))
+    const logicalDate = typeof value === 'string' 
+      ? LogicalDate.fromString(value)
+      : value
+    
+    if (logicalDate) {
+      const monthName = MONTHS[logicalDate.month - 1]
+      setDay(String(logicalDate.day).padStart(2, '0'))
       setMonth(monthName)
-      setYear(String(date.getUTCFullYear()))
+      setYear(String(logicalDate.year))
       setMonthInput(monthName)
       setPrevMonthInputLength(monthName.length)
     }
@@ -265,13 +254,22 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
       if (monthIndex !== -1) {
         const dayNum = parseInt(day)
         const yearNum = parseInt(year)
-        // Use UTC to create date to avoid timezone shifts
-        const daysInMonth = getDaysInMonth(new Date(Date.UTC(yearNum, monthIndex, 1)))
-        const validDay = Math.min(dayNum, daysInMonth)
+        const monthNum = monthIndex + 1 // LogicalDate months are 1-12
         
-        const newDate = new Date(Date.UTC(yearNum, monthIndex, validDay))
-        if (isValid(newDate)) {
-          onChange(newDate)
+        // Use LogicalDate to handle month boundaries (e.g., Feb 30 -> Feb 28/29)
+        try {
+          const logicalDate = LogicalDate.from(yearNum, monthNum, dayNum)
+          // If the day is invalid for the month, LogicalDate will adjust it
+          // But we should validate and use the actual day from the LogicalDate
+          const actualDay = logicalDate.day
+          if (actualDay !== dayNum) {
+            // Day was adjusted (e.g., Feb 30 -> Feb 28), update the input
+            setDay(String(actualDay).padStart(2, '0'))
+          }
+          onChange(logicalDate)
+        } catch (error) {
+          // Invalid date - don't update
+          console.error('Invalid date:', error)
         }
       }
     }
@@ -328,13 +326,16 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
     const monthIndex = MONTHS.indexOf(month)
     if (monthIndex !== -1 && year) {
       const yearNum = parseInt(year)
-      const daysInMonth = getDaysInMonth(new Date(yearNum, monthIndex))
-      const validDay = Math.min(selectedDay, daysInMonth)
-      setDay(String(validDay).padStart(2, '0'))
+      const monthNum = monthIndex + 1
       
-      const newDate = new Date(yearNum, monthIndex, validDay)
-      if (isValid(newDate)) {
-        onChange(newDate)
+      // Use LogicalDate to handle month boundaries
+      try {
+        const logicalDate = LogicalDate.from(yearNum, monthNum, selectedDay)
+        const actualDay = logicalDate.day
+        setDay(String(actualDay).padStart(2, '0'))
+        onChange(logicalDate)
+      } catch (error) {
+        console.error('Invalid date:', error)
       }
     }
   }
@@ -357,15 +358,16 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
       setMonthInput(MONTHS[newMonthIndex])
       setYear(String(newYear))
       
-      // Adjust day if needed
-      const daysInNewMonth = getDaysInMonth(new Date(newYear, newMonthIndex))
-      const currentDay = parseInt(day) || 1
-      const validDay = Math.min(currentDay, daysInNewMonth)
-      setDay(String(validDay).padStart(2, '0'))
-      
-      const newDate = new Date(newYear, newMonthIndex, validDay)
-      if (isValid(newDate)) {
-        onChange(newDate)
+      // Adjust day if needed using LogicalDate
+      try {
+        const newMonthNum = newMonthIndex + 1
+        const currentDay = parseInt(day) || 1
+        const logicalDate = LogicalDate.from(newYear, newMonthNum, currentDay)
+        const validDay = logicalDate.day
+        setDay(String(validDay).padStart(2, '0'))
+        onChange(logicalDate)
+      } catch (error) {
+        console.error('Invalid date:', error)
       }
     }
   }
@@ -375,46 +377,56 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
       const newYear = parseInt(year) + delta
       setYear(String(newYear))
       
-      // Adjust day for leap years
+      // Adjust day for leap years using LogicalDate
       const monthIndex = MONTHS.indexOf(month)
       if (monthIndex !== -1) {
-        const daysInMonth = getDaysInMonth(new Date(newYear, monthIndex))
-        const currentDay = parseInt(day) || 1
-        const validDay = Math.min(currentDay, daysInMonth)
-        setDay(String(validDay).padStart(2, '0'))
-        
-        const newDate = new Date(newYear, monthIndex, validDay)
-        if (isValid(newDate)) {
-          onChange(newDate)
+        try {
+          const newMonthNum = monthIndex + 1
+          const currentDay = parseInt(day) || 1
+          const logicalDate = LogicalDate.from(newYear, newMonthNum, currentDay)
+          const validDay = logicalDate.day
+          setDay(String(validDay).padStart(2, '0'))
+          onChange(logicalDate)
+        } catch (error) {
+          console.error('Invalid date:', error)
         }
       }
     }
   }
 
-  // Get calendar dates for current month
+  // Get calendar dates for current month using LogicalDate
   const getCalendarDates = () => {
     const monthIndex = MONTHS.indexOf(month)
     if (monthIndex === -1 || !year) return []
     
     const yearNum = parseInt(year)
-    const firstDay = startOfMonth(new Date(yearNum, monthIndex))
-    const lastDay = endOfMonth(new Date(yearNum, monthIndex))
-    const daysInMonth = getDaysInMonth(new Date(yearNum, monthIndex))
-    const startDayOfWeek = firstDay.getDay()
+    const monthNum = monthIndex + 1
     
-    const dates: (number | null)[] = []
-    
-    // Add empty cells for days before month starts
-    for (let i = 0; i < startDayOfWeek; i++) {
-      dates.push(null)
+    try {
+      // Get first day of month
+      const firstDay = LogicalDate.from(yearNum, monthNum, 1)
+      const daysInMonth = firstDay.daysInMonth
+      
+      // Get day of week for first day (1 = Monday, 7 = Sunday)
+      // Adjust to 0-based for calendar display (0 = Sunday, 6 = Saturday)
+      const dayOfWeek = firstDay.dayOfWeek === 7 ? 0 : firstDay.dayOfWeek
+      
+      const dates: (number | null)[] = []
+      
+      // Add empty cells for days before month starts
+      for (let i = 0; i < dayOfWeek; i++) {
+        dates.push(null)
+      }
+      
+      // Add days of the month
+      for (let i = 1; i <= daysInMonth; i++) {
+        dates.push(i)
+      }
+      
+      return dates
+    } catch (error) {
+      return []
     }
-    
-    // Add days of the month
-    for (let i = 1; i <= daysInMonth; i++) {
-      dates.push(i)
-    }
-    
-    return dates
   }
 
   const calendarDates = getCalendarDates()
@@ -628,4 +640,3 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
     </>
   )
 }
-

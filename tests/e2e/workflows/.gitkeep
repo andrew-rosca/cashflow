@@ -1,0 +1,8 @@
+# Placeholder for E2E workflow tests
+# 
+# Example test structure:
+# - account-management.spec.ts
+# - transaction-creation.spec.ts
+# - projection-viewing.spec.ts
+# - recurring-transactions.spec.ts
+

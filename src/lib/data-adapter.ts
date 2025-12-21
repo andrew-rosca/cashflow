@@ -2,16 +2,20 @@
  * Data Adapter Interface
  * 
  * This interface defines the contract for all data storage implementations.
- * The default implementation uses Prisma + PostgreSQL, but this can be
- * replaced with any other storage mechanism (e.g., MongoDB, SQLite, in-memory).
+ * The default implementation uses Prisma + SQLite, but this can be
+ * replaced with any other storage mechanism (e.g., MongoDB, PostgreSQL, in-memory).
+ * 
+ * All dates use LogicalDate (calendar dates with no time component).
  */
+
+import type { LogicalDate } from './logical-date'
 
 export interface Account {
   id: string
   userId: string
   name: string
   initialBalance: number
-  balanceAsOf: Date
+  balanceAsOf: LogicalDate
   externalId?: string
 }
 
@@ -21,7 +25,7 @@ export interface Transaction {
   amount: number
   fromAccountId: string
   toAccountId: string
-  date: Date
+  date: LogicalDate
   settlementDays?: number
   description?: string
   recurrence?: RecurrencePattern
@@ -32,13 +36,13 @@ export interface RecurrencePattern {
   interval?: number
   dayOfWeek?: number
   dayOfMonth?: number
-  endDate?: Date
+  endDate?: LogicalDate
   occurrences?: number
 }
 
 export interface ProjectionData {
   accountId: string
-  date: Date
+  date: LogicalDate
   balance: number
 }
 
@@ -53,8 +57,8 @@ export interface DataAdapter {
   // Transactions
   getTransactions(userId: string, filters?: {
     accountId?: string
-    startDate?: Date
-    endDate?: Date
+    startDate?: LogicalDate
+    endDate?: LogicalDate
     recurring?: boolean
   }): Promise<Transaction[]>
   getTransaction(userId: string, transactionId: string): Promise<Transaction | null>
@@ -65,7 +69,7 @@ export interface DataAdapter {
   // Projections (computed)
   getProjections(userId: string, options: {
     accountId?: string
-    startDate: Date
-    endDate: Date
+    startDate: LogicalDate
+    endDate: LogicalDate
   }): Promise<ProjectionData[]>
 }

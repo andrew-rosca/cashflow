@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
-const prisma = new PrismaClient()
-const adapter = new PrismaDataAdapter()
+let prisma: PrismaClient
+let adapter: PrismaDataAdapter
 const TEST_USER_ID = 'test-user-transactions'
 
 describe('Transaction API Tests', () => {
@@ -11,6 +12,9 @@ describe('Transaction API Tests', () => {
   let externalAccountId: string
 
   beforeAll(async () => {
+    // Create PrismaClient after DATABASE_URL is set by vitest.setup.ts
+    prisma = new PrismaClient()
+    adapter = new PrismaDataAdapter(prisma)
     // Create test user
     await prisma.user.upsert({
       where: { id: TEST_USER_ID },
@@ -26,12 +30,12 @@ describe('Transaction API Tests', () => {
     const tracked = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',
       initialBalance: 1000,
-      balanceAsOf: new Date(),
+      balanceAsOf: LogicalDate.fromString('2025-12-01'),
     })
     const external = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Salary',
       initialBalance: 0,
-      balanceAsOf: new Date(),
+      balanceAsOf: LogicalDate.fromString('2025-12-01'),
     })
 
     trackedAccountId = tracked.id
@@ -44,7 +48,7 @@ describe('Transaction API Tests', () => {
         fromAccountId: externalAccountId,
         toAccountId: trackedAccountId,
         amount: 500,
-        date: new Date('2025-12-15'),
+        date: LogicalDate.fromString('2025-12-15'),
         description: 'Test paycheck',
       })
 
@@ -65,7 +69,7 @@ describe('Transaction API Tests', () => {
         fromAccountId: externalAccountId,
         toAccountId: trackedAccountId,
         amount: 200,
-        date: new Date('2025-12-01'),
+        date: LogicalDate.fromString('2025-12-01'),
         description: 'Weekly income',
         recurrence: {
           frequency: 'weekly',
@@ -105,7 +109,7 @@ describe('Transaction API Tests', () => {
         fromAccountId: externalAccountId,
         toAccountId: trackedAccountId,
         amount: 100,
-        date: new Date('2025-12-20'),
+        date: LogicalDate.fromString('2025-12-20'),
       })
 
       const transaction = await adapter.getTransaction(TEST_USER_ID, created.id)
@@ -126,7 +130,7 @@ describe('Transaction API Tests', () => {
         fromAccountId: externalAccountId,
         toAccountId: trackedAccountId,
         amount: 300,
-        date: new Date('2025-12-10'),
+        date: LogicalDate.fromString('2025-12-10'),
       })
 
       const updated = await adapter.updateTransaction(TEST_USER_ID, created.id, {
@@ -145,7 +149,7 @@ describe('Transaction API Tests', () => {
         fromAccountId: externalAccountId,
         toAccountId: trackedAccountId,
         amount: 50,
-        date: new Date('2025-12-05'),
+        date: LogicalDate.fromString('2025-12-05'),
       })
 
       await adapter.deleteTransaction(TEST_USER_ID, created.id)

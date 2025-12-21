@@ -1,15 +1,19 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
-const prisma = new PrismaClient()
-const adapter = new PrismaDataAdapter()
+let prisma: PrismaClient
+let adapter: PrismaDataAdapter
 const TEST_USER_ID = 'test-user-negative-amount'
 
 describe('Transaction with negative amount', () => {
   let accountId: string
 
   beforeAll(async () => {
+    // Create PrismaClient after DATABASE_URL is set by vitest.setup.ts
+    prisma = new PrismaClient()
+    adapter = new PrismaDataAdapter(prisma)
     // Create test user
     await prisma.user.upsert({
       where: { id: TEST_USER_ID },
@@ -25,7 +29,7 @@ describe('Transaction with negative amount', () => {
     const account = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',
       initialBalance: 1000,
-      balanceAsOf: new Date('2025-01-01'),
+      balanceAsOf: LogicalDate.fromString('2025-01-01'),
     })
     accountId = account.id
   })
@@ -42,7 +46,7 @@ describe('Transaction with negative amount', () => {
       fromAccountId: accountId,
       toAccountId: accountId,
       amount: negativeAmount,
-      date: new Date('2025-01-15'),
+      date: LogicalDate.fromString('2025-01-15'),
       description: 'Test expense',
     })
 

@@ -1,13 +1,17 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
-const prisma = new PrismaClient()
-const adapter = new PrismaDataAdapter()
+let prisma: PrismaClient
+let adapter: PrismaDataAdapter
 const TEST_USER_ID = 'test-user-accounts'
 
 describe('Account API Tests', () => {
   beforeAll(async () => {
+    // Create PrismaClient after DATABASE_URL is set by vitest.setup.ts
+    prisma = new PrismaClient()
+    adapter = new PrismaDataAdapter(prisma)
     // Create test user
     await prisma.user.upsert({
       where: { id: TEST_USER_ID },
@@ -22,7 +26,7 @@ describe('Account API Tests', () => {
 
   describe('F002: Create account', () => {
     it('should create an account with initial balance and balanceAsOf', async () => {
-      const balanceAsOf = new Date('2025-12-01')
+      const balanceAsOf = LogicalDate.fromString('2025-12-01')
       const account = await adapter.createAccount(TEST_USER_ID, {
         name: 'Test Checking',
         initialBalance: 1000,
@@ -40,10 +44,12 @@ describe('Account API Tests', () => {
 
   describe('F003: Create account with default balanceAsOf', () => {
     it('should create an account with balanceAsOf defaulting to today', async () => {
+      // Use a fixed date for testing instead of "today"
+      const balanceAsOf = LogicalDate.fromString('2025-12-15')
       const account = await adapter.createAccount(TEST_USER_ID, {
         name: 'Savings Account',
         initialBalance: 500,
-        balanceAsOf: new Date(),
+        balanceAsOf,
       })
 
       expect(account).toBeDefined()
@@ -69,7 +75,7 @@ describe('Account API Tests', () => {
       const created = await adapter.createAccount(TEST_USER_ID, {
         name: 'Get Test',
         initialBalance: 500,
-        balanceAsOf: new Date(),
+        balanceAsOf: LogicalDate.fromString('2025-12-15'),
       })
 
       const account = await adapter.getAccount(TEST_USER_ID, created.id)
@@ -90,10 +96,10 @@ describe('Account API Tests', () => {
       const created = await adapter.createAccount(TEST_USER_ID, {
         name: 'Update Test',
         initialBalance: 1000,
-        balanceAsOf: new Date('2025-12-01'),
+        balanceAsOf: LogicalDate.fromString('2025-12-01'),
       })
 
-      const newBalanceAsOf = new Date('2025-12-15')
+      const newBalanceAsOf = LogicalDate.fromString('2025-12-15')
       const updated = await adapter.updateAccount(TEST_USER_ID, created.id, {
         name: 'Updated Name',
         initialBalance: 2000,
@@ -110,7 +116,7 @@ describe('Account API Tests', () => {
       const created = await adapter.createAccount(TEST_USER_ID, {
         name: 'Delete Test',
         initialBalance: 0,
-        balanceAsOf: new Date(),
+        balanceAsOf: LogicalDate.fromString('2025-12-15'),
       })
 
       await adapter.deleteAccount(TEST_USER_ID, created.id)

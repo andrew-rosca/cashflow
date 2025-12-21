@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
+import { LogicalDate } from '@/lib/logical-date'
 
-const prisma = new PrismaClient()
-const adapter = new PrismaDataAdapter()
+let prisma: PrismaClient
+let adapter: PrismaDataAdapter
 const TEST_USER_ID = 'test-user-recurring'
 
 describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
@@ -13,6 +14,9 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
   let expenseAccountId: string
 
   beforeAll(async () => {
+    // Create PrismaClient after DATABASE_URL is set by vitest.setup.ts
+    prisma = new PrismaClient()
+    adapter = new PrismaDataAdapter(prisma)
     // Clean up any existing test data
     await prisma.transaction.deleteMany({ where: { userId: TEST_USER_ID } })
     await prisma.cashFlowAccount.deleteMany({ where: { userId: TEST_USER_ID } })
@@ -28,7 +32,7 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
     })
 
     // Create test accounts
-    const testBalanceDate = new Date('2025-01-01')
+    const testBalanceDate = LogicalDate.fromString('2025-01-01')
 
     const checking = await adapter.createAccount(TEST_USER_ID, {
       name: 'Test Checking',

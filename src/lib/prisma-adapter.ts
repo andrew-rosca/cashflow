@@ -1,50 +1,83 @@
 /**
  * Prisma Data Adapter
  * 
- * Reference implementation of the DataAdapter interface using Prisma + PostgreSQL.
+ * Reference implementation of the DataAdapter interface using Prisma + SQLite.
+ * 
+ * All dates are stored as strings (YYYY-MM-DD) in the database and converted
+ * to/from LogicalDate objects for application use.
  */
 
-import { prisma } from './db'
+import { PrismaClient } from '@prisma/client'
+import { prisma as defaultPrisma } from './db'
 import type { DataAdapter, Account, Transaction, ProjectionData } from './data-adapter'
+import { LogicalDate } from './logical-date'
+import { Temporal } from '@js-temporal/polyfill'
 
 export class PrismaDataAdapter implements DataAdapter {
+  private prisma: PrismaClient
+
+  constructor(prismaInstance?: PrismaClient) {
+    this.prisma = prismaInstance ?? defaultPrisma
+  }
   // Accounts
   async getAccounts(userId: string): Promise<Account[]> {
-    const accounts = await prisma.cashFlowAccount.findMany({
+    const accounts = await this.prisma.cashFlowAccount.findMany({
       where: {
         userId,
       },
     })
-    return accounts as Account[]
+    return accounts.map(acc => ({
+      ...acc,
+      balanceAsOf: LogicalDate.fromString(acc.balanceAsOf),
+    })) as Account[]
   }
 
   async getAccount(userId: string, accountId: string): Promise<Account | null> {
-    const account = await prisma.cashFlowAccount.findFirst({
+    const account = await this.prisma.cashFlowAccount.findFirst({
       where: { id: accountId, userId },
     })
-    return account as Account | null
+    if (!account) return null
+    return {
+      ...account,
+      balanceAsOf: LogicalDate.fromString(account.balanceAsOf),
+    } as Account
   }
 
   async createAccount(userId: string, account: Omit<Account, 'id' | 'userId'>): Promise<Account> {
-    const created = await prisma.cashFlowAccount.create({
+    const created = await this.prisma.cashFlowAccount.create({
       data: {
         userId,
-        ...account,
+        name: account.name,
+        initialBalance: account.initialBalance,
+        balanceAsOf: account.balanceAsOf.toString(), // Convert LogicalDate to string
+        externalId: account.externalId,
       },
     })
-    return created as Account
+    return {
+      ...created,
+      balanceAsOf: LogicalDate.fromString(created.balanceAsOf),
+    } as Account
   }
 
   async updateAccount(userId: string, accountId: string, account: Partial<Account>): Promise<Account> {
-    const updated = await prisma.cashFlowAccount.update({
+    const updateData: any = {}
+    if (account.name !== undefined) updateData.name = account.name
+    if (account.initialBalance !== undefined) updateData.initialBalance = account.initialBalance
+    if (account.balanceAsOf !== undefined) updateData.balanceAsOf = account.balanceAsOf.toString()
+    if (account.externalId !== undefined) updateData.externalId = account.externalId
+
+    const updated = await this.prisma.cashFlowAccount.update({
       where: { id: accountId },
-      data: account,
+      data: updateData,
     })
-    return updated as Account
+    return {
+      ...updated,
+      balanceAsOf: LogicalDate.fromString(updated.balanceAsOf),
+    } as Account
   }
 
   async deleteAccount(userId: string, accountId: string): Promise<void> {
-    await prisma.cashFlowAccount.delete({
+    await this.prisma.cashFlowAccount.delete({
       where: { id: accountId, userId },
     })
   }
@@ -52,26 +85,31 @@ export class PrismaDataAdapter implements DataAdapter {
   // Transactions
   async getTransactions(userId: string, filters?: {
     accountId?: string
-    startDate?: Date
-    endDate?: Date
+    startDate?: LogicalDate
+    endDate?: LogicalDate
     recurring?: boolean
   }): Promise<Transaction[]> {
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        userId,
-        ...(filters?.accountId ? {
-          OR: [
-            { fromAccountId: filters.accountId },
-            { toAccountId: filters.accountId },
-          ],
-        } : {}),
-        ...(filters?.startDate || filters?.endDate ? {
-          date: {
-            ...(filters.startDate ? { gte: filters.startDate } : {}),
-            ...(filters.endDate ? { lte: filters.endDate } : {}),
-          },
-        } : {}),
-      },
+    const whereClause: any = { userId }
+    
+    if (filters?.accountId) {
+      whereClause.OR = [
+        { fromAccountId: filters.accountId },
+        { toAccountId: filters.accountId },
+      ]
+    }
+
+    if (filters?.startDate || filters?.endDate) {
+      whereClause.date = {}
+      if (filters.startDate) {
+        whereClause.date.gte = filters.startDate.toString()
+      }
+      if (filters.endDate) {
+        whereClause.date.lte = filters.endDate.toString()
+      }
+    }
+
+    const transactions = await this.prisma.transaction.findMany({
+      where: whereClause,
       include: {
         recurrence: true,
       },
@@ -83,7 +121,7 @@ export class PrismaDataAdapter implements DataAdapter {
       amount: t.amount,
       fromAccountId: t.fromAccountId,
       toAccountId: t.toAccountId,
-      date: t.date,
+      date: LogicalDate.fromString(t.date),
       settlementDays: t.settlementDays ?? undefined,
       description: t.description ?? undefined,
       recurrence: t.recurrence ? {
@@ -91,14 +129,14 @@ export class PrismaDataAdapter implements DataAdapter {
         interval: t.recurrence.interval ?? undefined,
         dayOfWeek: t.recurrence.dayOfWeek ?? undefined,
         dayOfMonth: t.recurrence.dayOfMonth ?? undefined,
-        endDate: t.recurrence.endDate ?? undefined,
+        endDate: t.recurrence.endDate ? LogicalDate.fromString(t.recurrence.endDate) : undefined,
         occurrences: t.recurrence.occurrences ?? undefined,
       } : undefined,
     })) as Transaction[]
   }
 
   async getTransaction(userId: string, transactionId: string): Promise<Transaction | null> {
-    const transaction = await prisma.transaction.findFirst({
+    const transaction = await this.prisma.transaction.findFirst({
       where: { id: transactionId, userId },
       include: { recurrence: true },
     })
@@ -111,7 +149,7 @@ export class PrismaDataAdapter implements DataAdapter {
       amount: transaction.amount,
       fromAccountId: transaction.fromAccountId,
       toAccountId: transaction.toAccountId,
-      date: transaction.date,
+      date: LogicalDate.fromString(transaction.date),
       settlementDays: transaction.settlementDays ?? undefined,
       description: transaction.description ?? undefined,
       recurrence: transaction.recurrence ? {
@@ -119,24 +157,31 @@ export class PrismaDataAdapter implements DataAdapter {
         interval: transaction.recurrence.interval ?? undefined,
         dayOfWeek: transaction.recurrence.dayOfWeek ?? undefined,
         dayOfMonth: transaction.recurrence.dayOfMonth ?? undefined,
-        endDate: transaction.recurrence.endDate ?? undefined,
+        endDate: transaction.recurrence.endDate ? LogicalDate.fromString(transaction.recurrence.endDate) : undefined,
         occurrences: transaction.recurrence.occurrences ?? undefined,
       } : undefined,
     } as Transaction
   }
 
   async createTransaction(userId: string, transaction: Omit<Transaction, 'id' | 'userId'>): Promise<Transaction> {
-    const created = await prisma.transaction.create({
+    const created = await this.prisma.transaction.create({
       data: {
         userId,
         amount: transaction.amount,
         fromAccountId: transaction.fromAccountId,
         toAccountId: transaction.toAccountId,
-        date: transaction.date,
+        date: transaction.date.toString(), // Convert LogicalDate to string
         settlementDays: transaction.settlementDays,
         description: transaction.description,
         recurrence: transaction.recurrence ? {
-          create: transaction.recurrence,
+          create: {
+            frequency: transaction.recurrence.frequency,
+            interval: transaction.recurrence.interval,
+            dayOfWeek: transaction.recurrence.dayOfWeek,
+            dayOfMonth: transaction.recurrence.dayOfMonth,
+            endDate: transaction.recurrence.endDate?.toString(), // Convert LogicalDate to string
+            occurrences: transaction.recurrence.occurrences,
+          },
         } : undefined,
       },
       include: { recurrence: true },
@@ -148,7 +193,7 @@ export class PrismaDataAdapter implements DataAdapter {
       amount: created.amount,
       fromAccountId: created.fromAccountId,
       toAccountId: created.toAccountId,
-      date: created.date,
+      date: LogicalDate.fromString(created.date),
       settlementDays: created.settlementDays ?? undefined,
       description: created.description ?? undefined,
       recurrence: created.recurrence ? {
@@ -156,23 +201,24 @@ export class PrismaDataAdapter implements DataAdapter {
         interval: created.recurrence.interval ?? undefined,
         dayOfWeek: created.recurrence.dayOfWeek ?? undefined,
         dayOfMonth: created.recurrence.dayOfMonth ?? undefined,
-        endDate: created.recurrence.endDate ?? undefined,
+        endDate: created.recurrence.endDate ? LogicalDate.fromString(created.recurrence.endDate) : undefined,
         occurrences: created.recurrence.occurrences ?? undefined,
       } : undefined,
     } as Transaction
   }
 
   async updateTransaction(userId: string, transactionId: string, transaction: Partial<Transaction>): Promise<Transaction> {
-    const updated = await prisma.transaction.update({
+    const updateData: any = {}
+    if (transaction.amount !== undefined) updateData.amount = transaction.amount
+    if (transaction.fromAccountId !== undefined) updateData.fromAccountId = transaction.fromAccountId
+    if (transaction.toAccountId !== undefined) updateData.toAccountId = transaction.toAccountId
+    if (transaction.date !== undefined) updateData.date = transaction.date.toString()
+    if (transaction.settlementDays !== undefined) updateData.settlementDays = transaction.settlementDays
+    if (transaction.description !== undefined) updateData.description = transaction.description
+
+    const updated = await this.prisma.transaction.update({
       where: { id: transactionId },
-      data: {
-        ...(transaction.amount !== undefined ? { amount: transaction.amount } : {}),
-        ...(transaction.fromAccountId ? { fromAccountId: transaction.fromAccountId } : {}),
-        ...(transaction.toAccountId ? { toAccountId: transaction.toAccountId } : {}),
-        ...(transaction.date ? { date: transaction.date } : {}),
-        ...(transaction.settlementDays !== undefined ? { settlementDays: transaction.settlementDays } : {}),
-        ...(transaction.description !== undefined ? { description: transaction.description } : {}),
-      },
+      data: updateData,
       include: { recurrence: true },
     })
 
@@ -182,7 +228,7 @@ export class PrismaDataAdapter implements DataAdapter {
       amount: updated.amount,
       fromAccountId: updated.fromAccountId,
       toAccountId: updated.toAccountId,
-      date: updated.date,
+      date: LogicalDate.fromString(updated.date),
       settlementDays: updated.settlementDays ?? undefined,
       description: updated.description ?? undefined,
       recurrence: updated.recurrence ? {
@@ -190,14 +236,14 @@ export class PrismaDataAdapter implements DataAdapter {
         interval: updated.recurrence.interval ?? undefined,
         dayOfWeek: updated.recurrence.dayOfWeek ?? undefined,
         dayOfMonth: updated.recurrence.dayOfMonth ?? undefined,
-        endDate: updated.recurrence.endDate ?? undefined,
+        endDate: updated.recurrence.endDate ? LogicalDate.fromString(updated.recurrence.endDate) : undefined,
         occurrences: updated.recurrence.occurrences ?? undefined,
       } : undefined,
     } as Transaction
   }
 
   async deleteTransaction(userId: string, transactionId: string): Promise<void> {
-    await prisma.transaction.delete({
+    await this.prisma.transaction.delete({
       where: { id: transactionId, userId },
     })
   }
@@ -205,8 +251,8 @@ export class PrismaDataAdapter implements DataAdapter {
   // Projections
   async getProjections(userId: string, options: {
     accountId?: string
-    startDate: Date
-    endDate: Date
+    startDate: LogicalDate
+    endDate: LogicalDate
   }): Promise<ProjectionData[]> {
     const { accountId, startDate, endDate } = options
 
@@ -219,13 +265,14 @@ export class PrismaDataAdapter implements DataAdapter {
     if (accounts.length === 0) return []
 
     // Get all transactions (both one-time and recurring)
+    // Don't filter by date here - we want all transactions and will filter in the projection loop
     const transactions = await this.getTransactions(userId, {
       accountId,
     })
 
     // Materialize all transactions into specific date events
     const events: Array<{
-      date: Date
+      date: LogicalDate
       accountId: string
       amount: number // positive = credit, negative = debit
     }> = []
@@ -247,29 +294,28 @@ export class PrismaDataAdapter implements DataAdapter {
     }
 
     // Sort events by date
-    events.sort((a, b) => a.date.getTime() - b.date.getTime())
+    events.sort((a, b) => a.date.compare(b.date))
 
     // Calculate daily balances for each account
     const projections: ProjectionData[] = []
 
     for (const account of accounts) {
       let currentBalance = account.initialBalance
-      const balanceDate = new Date(account.balanceAsOf)
-      balanceDate.setHours(0, 0, 0, 0)
+      const balanceDate = account.balanceAsOf
 
       // Start projecting from the later of balanceAsOf or startDate
-      let currentDate = new Date(Math.max(balanceDate.getTime(), new Date(startDate).getTime()))
-      currentDate.setHours(0, 0, 0, 0)
+      const startProjectionDate = balanceDate.compare(startDate) > 0 
+        ? balanceDate 
+        : startDate
 
-      const endDateCopy = new Date(endDate)
-      endDateCopy.setHours(23, 59, 59, 999)
+      let currentDate = startProjectionDate
 
-      while (currentDate <= endDateCopy) {
+      while (currentDate.compare(endDate) <= 0) {
         // Apply all events for this account on this date
-        const dateEvents = events.filter(e =>
-          e.accountId === account.id &&
-          this.isSameDay(e.date, currentDate)
-        )
+        const dateEvents = events.filter(e => {
+          if (e.accountId !== account.id) return false
+          return e.date.equals(currentDate)
+        })
 
         for (const event of dateEvents) {
           currentBalance += event.amount
@@ -278,12 +324,12 @@ export class PrismaDataAdapter implements DataAdapter {
         // Record the balance for this date
         projections.push({
           accountId: account.id,
-          date: new Date(currentDate),
+          date: currentDate,
           balance: currentBalance,
         })
 
         // Move to next day
-        currentDate.setDate(currentDate.getDate() + 1)
+        currentDate = currentDate.addDays(1)
       }
     }
 
@@ -292,33 +338,27 @@ export class PrismaDataAdapter implements DataAdapter {
 
   private materializeRecurringTransaction(
     tx: Transaction,
-    startDate: Date,
-    endDate: Date
+    startDate: LogicalDate,
+    endDate: LogicalDate
   ): Transaction[] {
     if (!tx.recurrence) return []
 
     const occurrences: Transaction[] = []
     const { frequency, interval = 1, dayOfWeek, dayOfMonth, endDate: recEndDate, occurrences: maxOccurrences } = tx.recurrence
 
-    let currentDate = new Date(tx.date)
-    currentDate.setHours(0, 0, 0, 0)
-
-    const projectionStart = new Date(startDate)
-    projectionStart.setHours(0, 0, 0, 0)
-
-    const projectionEnd = new Date(endDate)
-    projectionEnd.setHours(23, 59, 59, 999)
-
-    const recurrenceEnd = recEndDate ? new Date(recEndDate) : projectionEnd
-    const effectiveEnd = recurrenceEnd < projectionEnd ? recurrenceEnd : projectionEnd
+    let currentDate = tx.date
+    const recurrenceEnd = recEndDate ? recEndDate : endDate
+    const effectiveEnd = recurrenceEnd.compare(endDate) <= 0 
+      ? recurrenceEnd 
+      : endDate
 
     let totalCount = 0 // Total occurrences generated (for occurrences limit)
 
-    while (currentDate <= effectiveEnd) {
-      if (currentDate >= projectionStart && currentDate <= projectionEnd) {
+    while (currentDate.compare(effectiveEnd) <= 0) {
+      if (currentDate.compare(startDate) >= 0 && currentDate.compare(endDate) <= 0) {
         occurrences.push({
           ...tx,
-          date: new Date(currentDate),
+          date: currentDate,
         })
       }
 
@@ -328,21 +368,22 @@ export class PrismaDataAdapter implements DataAdapter {
       // Calculate next occurrence
       switch (frequency) {
         case 'daily':
-          currentDate.setDate(currentDate.getDate() + interval)
+          currentDate = currentDate.addDays(interval)
           break
         case 'weekly':
-          currentDate.setDate(currentDate.getDate() + (7 * interval))
+          currentDate = currentDate.addDays(7 * interval)
           break
         case 'monthly':
-          currentDate.setMonth(currentDate.getMonth() + interval)
+          currentDate = currentDate.addMonths(interval)
           if (dayOfMonth) {
             // Set to specific day of month, handling month-end edge cases
-            const targetDay = Math.min(dayOfMonth, this.getDaysInMonth(currentDate))
-            currentDate.setDate(targetDay)
+            const daysInMonth = currentDate.daysInMonth
+            const targetDay = Math.min(dayOfMonth, daysInMonth)
+            currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
           }
           break
         case 'yearly':
-          currentDate.setFullYear(currentDate.getFullYear() + interval)
+          currentDate = currentDate.addYears(interval)
           break
       }
 
@@ -354,7 +395,7 @@ export class PrismaDataAdapter implements DataAdapter {
   }
 
   private addTransactionEvents(
-    events: Array<{ date: Date; accountId: string; amount: number }>,
+    events: Array<{ date: LogicalDate; accountId: string; amount: number }>,
     tx: Transaction,
     trackedAccounts: Account[]
   ) {
@@ -362,18 +403,13 @@ export class PrismaDataAdapter implements DataAdapter {
     const toAccount = trackedAccounts.find(a => a.id === tx.toAccountId)
     const settlementDays = tx.settlementDays || 0
 
-    // Normalize transaction date to midnight to ensure consistent date comparison
-    const txDate = new Date(tx.date)
-    txDate.setHours(0, 0, 0, 0)
-    const normalizedDate = txDate
-
     // If both accounts are the same (self-transfer or expense/income), apply the amount directly
     // This represents a direct change to the account balance
     if (fromAccount && toAccount && tx.fromAccountId === tx.toAccountId) {
       // Same account: apply the transaction amount directly (preserve sign)
       // Negative amount = expense (outflow), positive amount = income (inflow)
       events.push({
-        date: normalizedDate,
+        date: tx.date,
         accountId: fromAccount.id,
         amount: tx.amount, // Use amount directly, preserving sign
       })
@@ -382,7 +418,7 @@ export class PrismaDataAdapter implements DataAdapter {
       // Debit event (money leaves fromAccount)
       if (fromAccount) {
         events.push({
-          date: normalizedDate,
+          date: tx.date,
           accountId: fromAccount.id,
           amount: -tx.amount, // negative = debit
         })
@@ -390,9 +426,8 @@ export class PrismaDataAdapter implements DataAdapter {
 
       // Credit event (money arrives at toAccount)
       if (toAccount) {
-        const creditDate = new Date(tx.date)
-        creditDate.setHours(0, 0, 0, 0)
-        creditDate.setDate(creditDate.getDate() + settlementDays)
+        // Calculate credit date (transaction date + settlement days)
+        const creditDate = tx.date.addDays(settlementDays)
         events.push({
           date: creditDate,
           accountId: toAccount.id,
@@ -400,20 +435,6 @@ export class PrismaDataAdapter implements DataAdapter {
         })
       }
     }
-  }
-
-  private isSameDay(date1: Date, date2: Date): boolean {
-    // Normalize both dates to midnight for comparison
-    // This handles timezone differences by comparing the date components
-    const d1 = new Date(date1)
-    d1.setHours(0, 0, 0, 0)
-    const d2 = new Date(date2)
-    d2.setHours(0, 0, 0, 0)
-    return d1.getTime() === d2.getTime()
-  }
-
-  private getDaysInMonth(date: Date): number {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   }
 }
 

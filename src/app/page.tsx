@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { format, addDays, parseISO } from 'date-fns'
 import DateInput from '@/components/DateInput'
 import RecurrenceControl from '@/components/RecurrenceControl'
+import { LogicalDate } from '@/lib/logical-date'
 
 interface Account {
   id: string
@@ -33,7 +33,7 @@ interface Transaction {
 
 interface ProjectionData {
   accountId: string
-  date: Date | string
+  date: string // Calendar date string (YYYY-MM-DD)
   balance: number
 }
 
@@ -47,13 +47,19 @@ export default function Home() {
   const [editValue, setEditValue] = useState<string>('')
   const dateValueRef = useRef<Record<string, string>>({})
   
+  // Helper to get today's date (client-side only - uses browser's local date)
+  const getToday = (): LogicalDate => {
+    const now = new Date()
+    return LogicalDate.from(now.getFullYear(), now.getMonth() + 1, now.getDate())
+  }
+
   // Dialog states
   const [accountDialogOpen, setAccountDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [isRecurringTransaction, setIsRecurringTransaction] = useState(false)
-  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
+  const [transactionDate, setTransactionDate] = useState<LogicalDate>(getToday())
   const [transactionAccountId, setTransactionAccountId] = useState<string>('')
   const [recurrence, setRecurrence] = useState<any>({
     frequency: 'monthly',
@@ -98,10 +104,10 @@ export default function Home() {
 
   const loadTransactions = async () => {
     try {
-      const today = new Date()
-      const futureDate = addDays(today, 365)
+      const today = getToday()
+      const futureDate = today.addDays(365)
       const response = await fetch(
-        `/api/transactions?startDate=${format(today, 'yyyy-MM-dd')}&endDate=${format(futureDate, 'yyyy-MM-dd')}`
+        `/api/transactions?startDate=${today.toString()}&endDate=${futureDate.toString()}`
       )
       if (!response.ok) {
         console.error('Failed to load transactions:', response.status, response.statusText)
@@ -116,8 +122,8 @@ export default function Home() {
 
   const loadProjections = async () => {
     try {
-      const today = new Date()
-      const endDate = addDays(today, 90)
+      const today = getToday()
+      const endDate = today.addDays(90)
       
       if (accounts.length === 0) {
         setProjections([])
@@ -128,7 +134,7 @@ export default function Home() {
       const allProjections: ProjectionData[] = []
       for (const account of accounts) {
         const response = await fetch(
-          `/api/projections?accountId=${account.id}&startDate=${format(today, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}&_t=${Date.now()}`,
+          `/api/projections?accountId=${account.id}&startDate=${today.toString()}&endDate=${endDate.toString()}&_t=${Date.now()}`,
           {
             cache: 'no-store',
           }
@@ -148,7 +154,7 @@ export default function Home() {
   }
 
   // Inline editing handlers
-  const handleCellClick = (cellId: string, currentValue: string | Date) => {
+  const handleCellClick = (cellId: string, currentValue: string | LogicalDate) => {
     setEditingCell(cellId)
     // If it's a date, use the date string directly to avoid timezone issues
     if (cellId.includes('date')) {
@@ -160,14 +166,10 @@ export default function Home() {
   }
 
   // Handler for date changes from DateInput component
-  const handleDateChange = (date: Date) => {
+  const handleDateChange = (date: LogicalDate) => {
     if (!editingCell) return
-    // Extract UTC date components to avoid timezone shifts
-    const year = date.getUTCFullYear()
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(date.getUTCDate()).padStart(2, '0')
-    const dateStr = `${year}-${month}-${day}`
-    console.log('handleDateChange - date:', date.toISOString(), '-> formatted:', dateStr, 'UTC year:', year)
+    // DateInput now returns LogicalDate directly
+    const dateStr = date.toString() // YYYY-MM-DD format
     setEditValue(dateStr)
     // Store the date string in a ref so handleCellBlur can access it immediately
     if (!dateValueRef.current) {
@@ -216,13 +218,12 @@ export default function Home() {
         loadAccounts()
       } else if (parts[0] === 'tx' && parts[1] === 'date') {
         const txId = parts[2]
-        // editValue is stored as YYYY-MM-DD, convert to Date
+        // editValue is stored as YYYY-MM-DD, send directly as string
         const dateStr = editValue // YYYY-MM-DD format
-        const localDate = new Date(dateStr + 'T00:00:00')
         await fetch(`/api/transactions/${txId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: localDate.toISOString() }),
+          body: JSON.stringify({ date: dateStr }),
         })
         await loadTransactions()
         // Reload projections after transaction date is updated
@@ -339,7 +340,7 @@ export default function Home() {
         body: JSON.stringify({
           name: 'New Account',
           initialBalance: 0,
-          balanceAsOf: new Date().toISOString().split('T')[0] + 'T00:00:00',
+          balanceAsOf: getToday().toString(),
         }),
       })
       if (!response.ok) {
@@ -361,10 +362,8 @@ export default function Home() {
         setSelectedTransactionId(transactionId)
         setIsRecurringTransaction(!!tx.recurrence)
         setTransactionAccountId(tx.fromAccountId)
-        // Set dates from transaction
-        const txDate = typeof tx.date === 'string' 
-          ? new Date(tx.date.split('T')[0] + 'T00:00:00')
-          : tx.date
+        // Set dates from transaction (now a calendar date string)
+        const txDate = LogicalDate.fromString(tx.date)
         setTransactionDate(txDate)
         // Set recurrence from transaction
         if (tx.recurrence) {
@@ -373,8 +372,8 @@ export default function Home() {
             interval: tx.recurrence.interval || 1,
             dayOfWeek: tx.recurrence.dayOfWeek ?? null,
             dayOfMonth: tx.recurrence.dayOfMonth ?? null,
-            month: tx.recurrence.month ?? null,
-            endDate: tx.recurrence.endDate ? (typeof tx.recurrence.endDate === 'string' ? tx.recurrence.endDate : tx.recurrence.endDate.split('T')[0]) : null,
+            month: (tx.recurrence as any).month ?? null,
+            endDate: tx.recurrence.endDate || null,
           })
         } else {
           setRecurrence({
@@ -390,7 +389,7 @@ export default function Home() {
     } else {
       setSelectedTransactionId(null)
       setIsRecurringTransaction(false)
-      setTransactionDate(new Date())
+      setTransactionDate(getToday())
       // Set account from localStorage or default to first account
       const lastAccountId = localStorage.getItem('lastUsedAccountId')
       if (lastAccountId && accounts.find(a => a.id === lastAccountId)) {
@@ -416,7 +415,7 @@ export default function Home() {
     setTransactionDialogOpen(false)
     setSelectedTransactionId(null)
     setIsRecurringTransaction(false)
-    setTransactionDate(new Date())
+    setTransactionDate(getToday())
     setTransactionAccountId('')
     setRecurrence({
       frequency: 'monthly',
@@ -437,17 +436,21 @@ export default function Home() {
       localStorage.setItem('lastUsedAccountId', transactionAccountId)
     }
     
-    // Use transactionDate state (already a Date object)
+    // Use transactionDate state - convert to calendar date string (YYYY-MM-DD)
     const payload: any = {
       fromAccountId: transactionAccountId,
       toAccountId: transactionAccountId, // For now, use same account (transfers will be added later)
       amount: parseFloat(formData.get('amount') as string),
-      date: transactionDate.toISOString(),
+      date: getDateString(transactionDate), // Send as calendar date string (YYYY-MM-DD)
       description: (formData.get('description') as string) || undefined,
     }
 
     if (formData.get('isRecurring') === 'on') {
-      payload.recurrence = { ...recurrence }
+      payload.recurrence = { 
+        ...recurrence,
+        // Convert endDate to calendar date string if it exists
+        endDate: recurrence.endDate ? getDateString(recurrence.endDate) : null
+      }
     }
 
     try {
@@ -480,33 +483,21 @@ export default function Home() {
     return amount.toFixed(2)
   }
 
-  const formatDate = (dateStr: string | Date) => {
-    // Parse date as UTC to avoid timezone shifts
-    let date: Date
-    if (typeof dateStr === 'string') {
-      // If it's an ISO string, extract just the date part and parse as UTC
-      const dateOnly = dateStr.split('T')[0]
-      const [year, month, day] = dateOnly.split('-').map(Number)
-      date = new Date(Date.UTC(year, month - 1, day))
-    } else {
-      date = dateStr
-    }
-    // Format using UTC components to avoid timezone shifts
-    const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getUTCMonth()]
-    return `${monthName} ${date.getUTCDate()}`
+  const formatDate = (dateStr: string | LogicalDate) => {
+    // Parse date string to LogicalDate
+    const date = typeof dateStr === 'string' ? LogicalDate.fromString(dateStr) : dateStr
+    const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.month - 1]
+    return `${monthName} ${date.day}`
   }
   
-  // Helper to get date string in YYYY-MM-DD format from a date
-  const getDateString = (date: Date | string): string => {
+  // Helper to get date string in YYYY-MM-DD format
+  const getDateString = (date: string | LogicalDate): string => {
     if (typeof date === 'string') {
       // Extract date part from ISO string
       return date.split('T')[0]
     }
-    // Format as YYYY-MM-DD using UTC to avoid timezone shifts
-    const year = date.getUTCFullYear()
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(date.getUTCDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+    // LogicalDate
+    return date.toString()
   }
 
   // Get account name helper
@@ -541,32 +532,36 @@ export default function Home() {
   }
 
   // Get projected balance for account on date
-  const getProjectedBalance = (accountId: string, date: Date): number | null => {
-    const dateStr = format(date, 'yyyy-MM-dd')
+  const getProjectedBalance = (accountId: string, date: LogicalDate | string): number | null => {
+    const dateStr = date instanceof LogicalDate ? date.toString() : date
     const projection = projections.find(
-      p => p.accountId === accountId && format(new Date(p.date), 'yyyy-MM-dd') === dateStr
+      p => {
+        // API returns date as string (YYYY-MM-DD)
+        return p.accountId === accountId && p.date === dateStr
+      }
     )
     return projection ? projection.balance : null
   }
 
   // Get all unique dates from projections
-  const getAllProjectionDates = (): Date[] => {
+  const getAllProjectionDates = (): LogicalDate[] => {
     const dateSet = new Set<string>()
     projections.forEach(p => {
-      const dateStr = format(new Date(p.date), 'yyyy-MM-dd')
-      dateSet.add(dateStr)
+      // API returns date as string (YYYY-MM-DD)
+      dateSet.add(p.date)
     })
+    // Convert to LogicalDate objects and sort
     return Array.from(dateSet)
-      .map(d => parseISO(d))
-      .sort((a, b) => a.getTime() - b.getTime())
+      .map(d => LogicalDate.fromString(d))
+      .sort((a, b) => a.compare(b))
   }
 
   // Filter dates to only show rows where balance changes
-  const getDatesWithBalanceChanges = (): Date[] => {
+  const getDatesWithBalanceChanges = (): LogicalDate[] => {
     const allDates = getAllProjectionDates()
     if (allDates.length === 0) return []
 
-    const datesWithChanges: Date[] = [allDates[0]] // Always include first date
+    const datesWithChanges: LogicalDate[] = [allDates[0]] // Always include first date
 
     for (let i = 1; i < allDates.length; i++) {
       const currentDate = allDates[i]
@@ -631,18 +626,13 @@ export default function Home() {
                   const balanceAsOf = account.balanceAsOf 
                     ? (() => {
                         let dateOnly: string
-                        if (typeof account.balanceAsOf === 'string') {
-                          dateOnly = account.balanceAsOf.split('T')[0]
-                        } else {
-                          dateOnly = account.balanceAsOf.toISOString().split('T')[0]
-                        }
-                        // Parse as UTC to avoid timezone conversion issues
-                        const [year, month, day] = dateOnly.split('-').map(Number)
-                        const parsed = new Date(Date.UTC(year, month - 1, day))
-                        console.log('Account date from API:', account.balanceAsOf, '-> extracted:', dateOnly, '-> parsed year (UTC):', parsed.getUTCFullYear())
-                        return parsed
+                        // API returns balanceAsOf as string (YYYY-MM-DD)
+                        const dateStr = typeof account.balanceAsOf === 'string' 
+                          ? account.balanceAsOf.split('T')[0] 
+                          : account.balanceAsOf.toString().split('T')[0]
+                        return LogicalDate.fromString(dateStr)
                       })()
-                    : new Date()
+                    : getToday()
                   return (
                     <div
                       key={account.id}
@@ -713,7 +703,11 @@ export default function Home() {
               </div>
               <div className="space-y-1">
                 {[...oneTimeTransactions, ...recurringTransactions]
-                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                  .sort((a, b) => {
+                    const dateA = LogicalDate.fromString(a.date)
+                    const dateB = LogicalDate.fromString(b.date)
+                    return dateA.compare(dateB)
+                  })
                   .slice(0, 20)
                   .map(tx => (
                   <div
@@ -754,15 +748,15 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        {editingCell === `tx-date-${tx.id}` ? (
-                          <DateInput
-                            value={editValue ? new Date(editValue + 'T00:00:00') : tx.date}
-                            onChange={handleDateChange}
-                            onBlur={handleCellBlur}
-                            className="w-40 flex-shrink-0"
-                            autoFocus
-                          />
-                        ) : (
+                      {editingCell === `tx-date-${tx.id}` ? (
+                        <DateInput
+                          value={editValue ? LogicalDate.fromString(editValue) : LogicalDate.fromString(tx.date)}
+                          onChange={handleDateChange}
+                          onBlur={handleCellBlur}
+                          className="w-40 flex-shrink-0"
+                          autoFocus
+                        />
+                      ) : (
                           <span 
                             className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded"
                             onClick={() => handleCellClick(`tx-date-${tx.id}`, getDateString(tx.date))}
@@ -838,7 +832,7 @@ export default function Home() {
                 <tbody>
                   {projectionDates.map((date, idx) => (
                     <tr
-                      key={date.toISOString()}
+                      key={date.toString()}
                       className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
                         idx % 5 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''
                       }`}
