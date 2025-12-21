@@ -42,6 +42,7 @@ export default function TransactionsTab() {
     description: '',
     isRecurring: false,
     frequency: 'monthly',
+    interval: '',
     dayOfWeek: '',
     dayOfMonth: '',
   })
@@ -83,6 +84,9 @@ export default function TransactionsTab() {
         payload.recurrence = {
           frequency: formData.frequency,
         }
+        if (formData.interval) {
+          payload.recurrence.interval = parseInt(formData.interval)
+        }
         if (formData.frequency === 'weekly' && formData.dayOfWeek) {
           payload.recurrence.dayOfWeek = parseInt(formData.dayOfWeek)
         }
@@ -123,6 +127,7 @@ export default function TransactionsTab() {
       description: transaction.description || '',
       isRecurring: !!transaction.recurrence,
       frequency: transaction.recurrence?.frequency || 'monthly',
+      interval: transaction.recurrence?.interval?.toString() || '',
       dayOfWeek: transaction.recurrence?.dayOfWeek?.toString() || '',
       dayOfMonth: transaction.recurrence?.dayOfMonth?.toString() || '',
     })
@@ -150,6 +155,7 @@ export default function TransactionsTab() {
       description: '',
       isRecurring: false,
       frequency: 'monthly',
+      interval: '',
       dayOfWeek: '',
       dayOfMonth: '',
     })
@@ -339,10 +345,35 @@ export default function TransactionsTab() {
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
-                    <option value="biweekly">Bi-weekly</option>
                     <option value="monthly">Monthly</option>
                     <option value="yearly">Yearly</option>
                   </select>
+                </div>
+
+                {/* Interval field for all frequencies */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Interval (how often)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.interval}
+                    onChange={(e) => setFormData({ ...formData, interval: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder={
+                      formData.frequency === 'daily' ? 'e.g., 1 for every day, 2 for every 2 days' :
+                      formData.frequency === 'weekly' ? 'e.g., 1 for every week, 2 for every 2 weeks' :
+                      formData.frequency === 'monthly' ? 'e.g., 1 for every month, 3 for every 3 months' :
+                      'e.g., 1 for every year'
+                    }
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {formData.frequency === 'daily' && 'Every N days'}
+                    {formData.frequency === 'weekly' && 'Every N weeks (e.g., 2 = biweekly)'}
+                    {formData.frequency === 'monthly' && 'Every N months'}
+                    {formData.frequency === 'yearly' && 'Every N years'}
+                  </p>
                 </div>
 
                 {formData.frequency === 'weekly' && (
