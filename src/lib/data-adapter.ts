@@ -10,9 +10,8 @@ export interface Account {
   id: string
   userId: string
   name: string
-  type: 'tracked' | 'external'
-  category?: string
-  initialBalance?: number
+  initialBalance: number
+  balanceAsOf: Date
   externalId?: string
 }
 
@@ -45,7 +44,7 @@ export interface ProjectionData {
 
 export interface DataAdapter {
   // Accounts
-  getAccounts(userId: string, type?: 'tracked' | 'external'): Promise<Account[]>
+  getAccounts(userId: string): Promise<Account[]>
   getAccount(userId: string, accountId: string): Promise<Account | null>
   createAccount(userId: string, account: Omit<Account, 'id' | 'userId'>): Promise<Account>
   updateAccount(userId: string, accountId: string, account: Partial<Account>): Promise<Account>

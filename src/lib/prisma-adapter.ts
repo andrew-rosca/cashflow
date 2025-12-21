@@ -9,11 +9,10 @@ import type { DataAdapter, Account, Transaction, ProjectionData } from './data-a
 
 export class PrismaDataAdapter implements DataAdapter {
   // Accounts
-  async getAccounts(userId: string, type?: 'tracked' | 'external'): Promise<Account[]> {
+  async getAccounts(userId: string): Promise<Account[]> {
     const accounts = await prisma.cashFlowAccount.findMany({
       where: {
         userId,
-        ...(type ? { type } : {}),
       },
     })
     return accounts as Account[]
@@ -211,13 +210,13 @@ export class PrismaDataAdapter implements DataAdapter {
   }): Promise<ProjectionData[]> {
     const { accountId, startDate, endDate } = options
 
-    // Get tracked accounts
+    // Get accounts to project
     const accountsToProject = accountId
       ? [await this.getAccount(userId, accountId)]
-      : await this.getAccounts(userId, 'tracked')
+      : await this.getAccounts(userId)
 
-    const trackedAccounts = accountsToProject.filter(a => a && a.type === 'tracked') as Account[]
-    if (trackedAccounts.length === 0) return []
+    const accounts = accountsToProject.filter(a => a !== null) as Account[]
+    if (accounts.length === 0) return []
 
     // Get all transactions (both one-time and recurring)
     const transactions = await this.getTransactions(userId, {
@@ -236,11 +235,11 @@ export class PrismaDataAdapter implements DataAdapter {
         // Materialize recurring transactions
         const occurrences = this.materializeRecurringTransaction(tx, startDate, endDate)
         for (const occurrence of occurrences) {
-          this.addTransactionEvents(events, occurrence, trackedAccounts)
+          this.addTransactionEvents(events, occurrence, accounts)
         }
       } else {
         // Add one-time transaction
-        this.addTransactionEvents(events, tx, trackedAccounts)
+        this.addTransactionEvents(events, tx, accounts)
       }
     }
 
@@ -250,9 +249,13 @@ export class PrismaDataAdapter implements DataAdapter {
     // Calculate daily balances for each account
     const projections: ProjectionData[] = []
 
-    for (const account of trackedAccounts) {
-      let currentBalance = account.initialBalance || 0
-      let currentDate = new Date(startDate)
+    for (const account of accounts) {
+      let currentBalance = account.initialBalance
+      const balanceDate = new Date(account.balanceAsOf)
+      balanceDate.setHours(0, 0, 0, 0)
+
+      // Start projecting from the later of balanceAsOf or startDate
+      let currentDate = new Date(Math.max(balanceDate.getTime(), new Date(startDate).getTime()))
       currentDate.setHours(0, 0, 0, 0)
 
       const endDateCopy = new Date(endDate)
