@@ -39,6 +39,10 @@ else
     exit 1
 fi
 
+# Seed database with sample data
+echo "🌱 Seeding database with sample data..."
+npm run db:seed
+
 # Start development server
 echo ""
 echo "✅ Setup complete!"

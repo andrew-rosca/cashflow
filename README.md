@@ -6,7 +6,21 @@ A personal finance application that helps you project future account balances ba
 
 1. Copy `.env.example` to `.env` and configure your database URL
 2. Run `./init.sh` to install dependencies and start the development server
+   - This will automatically seed the database with sample data
 3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Sample Data
+
+The app comes pre-loaded with realistic sample data including:
+- **3 tracked accounts**: Main Checking ($2,500), Savings ($10,000), Credit Card (-$450)
+- **7 expense/income categories**: Salary, Groceries, Utilities, Rent, Entertainment, Dining, Insurance
+- **12 transactions**: Including recurring salary (biweekly), recurring bills (monthly), and various one-time expenses
+- **Projections**: Shows upcoming 60 days with balance trends and danger zones
+
+To reseed the database at any time, run:
+```bash
+npm run db:seed
+```
 
 ## Architecture
 
