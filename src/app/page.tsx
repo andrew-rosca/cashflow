@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format, addDays, parseISO } from 'date-fns'
 import DateInput from '@/components/DateInput'
+import RecurrenceControl from '@/components/RecurrenceControl'
 
 interface Account {
   id: string
@@ -52,7 +53,15 @@ export default function Home() {
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [isRecurringTransaction, setIsRecurringTransaction] = useState(false)
   const [transactionDate, setTransactionDate] = useState<Date>(new Date())
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null)
+  const [transactionAccountId, setTransactionAccountId] = useState<string>('')
+  const [recurrence, setRecurrence] = useState<any>({
+    frequency: 'monthly',
+    interval: 1,
+    dayOfWeek: null,
+    dayOfMonth: null,
+    month: null,
+    endDate: null,
+  })
 
   // Load data
   useEffect(() => {
@@ -299,10 +308,54 @@ export default function Home() {
       if (tx) {
         setSelectedTransactionId(transactionId)
         setIsRecurringTransaction(!!tx.recurrence)
+        setTransactionAccountId(tx.fromAccountId)
+        // Set dates from transaction
+        const txDate = typeof tx.date === 'string' 
+          ? new Date(tx.date.split('T')[0] + 'T00:00:00')
+          : tx.date
+        setTransactionDate(txDate)
+        // Set recurrence from transaction
+        if (tx.recurrence) {
+          setRecurrence({
+            frequency: tx.recurrence.frequency || 'monthly',
+            interval: tx.recurrence.interval || 1,
+            dayOfWeek: tx.recurrence.dayOfWeek ?? null,
+            dayOfMonth: tx.recurrence.dayOfMonth ?? null,
+            month: tx.recurrence.month ?? null,
+            endDate: tx.recurrence.endDate ? (typeof tx.recurrence.endDate === 'string' ? tx.recurrence.endDate : tx.recurrence.endDate.split('T')[0]) : null,
+          })
+        } else {
+          setRecurrence({
+            frequency: 'monthly',
+            interval: 1,
+            dayOfWeek: null,
+            dayOfMonth: null,
+            month: null,
+            endDate: null,
+          })
+        }
       }
     } else {
       setSelectedTransactionId(null)
       setIsRecurringTransaction(false)
+      setTransactionDate(new Date())
+      // Set account from localStorage or default to first account
+      const lastAccountId = localStorage.getItem('lastUsedAccountId')
+      if (lastAccountId && accounts.find(a => a.id === lastAccountId)) {
+        setTransactionAccountId(lastAccountId)
+      } else if (accounts.length === 1) {
+        setTransactionAccountId(accounts[0].id)
+      } else {
+        setTransactionAccountId('')
+      }
+      setRecurrence({
+        frequency: 'monthly',
+        interval: 1,
+        dayOfWeek: null,
+        dayOfMonth: null,
+        month: null,
+        endDate: null,
+      })
     }
     setTransactionDialogOpen(true)
   }
@@ -312,35 +365,37 @@ export default function Home() {
     setSelectedTransactionId(null)
     setIsRecurringTransaction(false)
     setTransactionDate(new Date())
-    setRecurrenceEndDate(null)
+    setTransactionAccountId('')
+    setRecurrence({
+      frequency: 'monthly',
+      interval: 1,
+      dayOfWeek: null,
+      dayOfMonth: null,
+      month: null,
+      endDate: null,
+    })
   }
 
   const handleTransactionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     
+    // Save most recently used account to localStorage
+    if (transactionAccountId) {
+      localStorage.setItem('lastUsedAccountId', transactionAccountId)
+    }
+    
     // Use transactionDate state (already a Date object)
     const payload: any = {
-      fromAccountId: formData.get('fromAccountId') as string,
-      toAccountId: formData.get('toAccountId') as string,
+      fromAccountId: transactionAccountId,
+      toAccountId: transactionAccountId, // For now, use same account (transfers will be added later)
       amount: parseFloat(formData.get('amount') as string),
       date: transactionDate.toISOString(),
       description: (formData.get('description') as string) || undefined,
     }
 
     if (formData.get('isRecurring') === 'on') {
-      payload.recurrence = {
-        frequency: formData.get('frequency') as string,
-      }
-      if (recurrenceEndDate) {
-        payload.recurrence.endDate = recurrenceEndDate.toISOString()
-      }
-      if (formData.get('dayOfWeek')) {
-        payload.recurrence.dayOfWeek = parseInt(formData.get('dayOfWeek') as string)
-      }
-      if (formData.get('dayOfMonth')) {
-        payload.recurrence.dayOfMonth = parseInt(formData.get('dayOfMonth') as string)
-      }
+      payload.recurrence = { ...recurrence }
     }
 
     try {
@@ -827,40 +882,31 @@ export default function Home() {
               </h3>
               <form onSubmit={handleTransactionSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    From Account
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Account
                   </label>
-                  <select
+                  <div className="flex flex-wrap gap-2">
+                    {accounts.map(account => (
+                      <button
+                        key={account.id}
+                        type="button"
+                        onClick={() => setTransactionAccountId(account.id)}
+                        className={`px-4 py-2 text-sm rounded-md border transition-colors ${
+                          transactionAccountId === account.id
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {account.name}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="hidden"
                     name="fromAccountId"
+                    value={transactionAccountId}
                     required
-                    defaultValue={selectedTransaction?.fromAccountId || ''}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="">Select account...</option>
-                    {accounts.map(account => (
-                      <option key={account.id} value={account.id}>
-                        {account.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    To Account
-                  </label>
-                  <select
-                    name="toAccountId"
-                    required
-                    defaultValue={selectedTransaction?.toAccountId || ''}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="">Select account...</option>
-                    {accounts.map(account => (
-                      <option key={account.id} value={account.id}>
-                        {account.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -910,83 +956,10 @@ export default function Home() {
                   </label>
                 </div>
                 {isRecurringTransaction && (
-                  <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Frequency
-                      </label>
-                      <select
-                        name="frequency"
-                        defaultValue={selectedTransaction?.recurrence?.frequency || 'monthly'}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="biweekly">Bi-weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                    </div>
-                    {isRecurringTransaction && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Day of Week (0=Sunday, 6=Saturday)
-                        </label>
-                        <input
-                          type="number"
-                          name="dayOfWeek"
-                          min="0"
-                          max="6"
-                          defaultValue={selectedTransaction?.recurrence?.dayOfWeek || ''}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                    )}
-                    {isRecurringTransaction && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Day of Month (1-31)
-                        </label>
-                        <input
-                          type="number"
-                          name="dayOfMonth"
-                          min="1"
-                          max="31"
-                          defaultValue={selectedTransaction?.recurrence?.dayOfMonth || ''}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        End Date (optional)
-                      </label>
-                      {recurrenceEndDate ? (
-                        <>
-                          <DateInput
-                            value={recurrenceEndDate}
-                            onChange={(date) => setRecurrenceEndDate(date)}
-                            className="w-full"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setRecurrenceEndDate(null)}
-                            className="mt-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                          >
-                            Clear end date
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setRecurrenceEndDate(new Date())}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm"
-                        >
-                          Set end date
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  <RecurrenceControl
+                    value={recurrence}
+                    onChange={setRecurrence}
+                  />
                 )}
                 <div className="flex gap-2 pt-4">
                   <button
