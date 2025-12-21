@@ -704,6 +704,69 @@ Current feature status: 13/83 complete (15.7%)
 
 ---
 
+### Session 8 - Transaction Filtering by Account (December 20, 2025)
+
+**Status**: Transaction filtering feature complete with tests
+
+**Completed Features:**
+- ✅ F034: Transaction list filters by selected account
+
+**Changes Made:**
+
+1. **Implemented Account Filter UI** ([TransactionsTab.tsx](src/components/TransactionsTab.tsx))
+   - Added account filter dropdown above transaction list
+   - Dropdown shows all accounts with "All Transactions" as default
+   - Added "Clear Filter" button when filter is active
+   - Shows count of filtered transactions
+
+2. **Implemented Filter Logic**
+   - Added `filterAccountId` state to track selected account
+   - Filter includes transactions where account is either `fromAccountId` or `toAccountId`
+   - Empty filter shows all transactions
+   - Filter works with both one-time and recurring transaction views
+
+3. **Created Comprehensive Test Suite** (`tests/features/transaction-filtering.test.ts`)
+   - 6 tests covering all filtering scenarios
+   - Tests filtering by checking account (involved in all transactions)
+   - Tests filtering by savings account (partial involvement)
+   - Tests filtering by income account (only as from)
+   - Tests filtering by expenses account (only as to)
+   - Tests filtering by account with no transactions
+   - All tests passing ✅
+
+4. **Updated Feature List**
+   - Marked F034 as passing in `docs/feature_list.json`
+
+**What Works:**
+- Dropdown to select account filter
+- Shows transactions where selected account is sender (from) OR receiver (to)
+- Works with both one-time and recurring transaction tabs
+- Clear filter button to reset to all transactions
+- Transaction count updates based on filter
+- Clean, intuitive UI integrated with existing design
+
+**Testing Coverage:**
+- All 45 tests passing (100% pass rate)
+- 7 test files covering all implemented features
+- Feature verified through automated tests
+- UI implementation confirmed in browser at http://localhost:3000
+
+**Technical Highlights:**
+- Filter logic uses simple JavaScript array filter
+- Bidirectional matching (from OR to) ensures comprehensive filtering
+- State management keeps filter selection across tab switches
+- Reactive UI updates transaction count automatically
+- Works seamlessly with existing one-time/recurring view toggle
+
+**Next Steps:**
+1. Add proper authentication (F035-F038)
+2. Polish UI features (loading states, error handling, validation)
+3. Implement additional filtering/search capabilities
+
+**Progress: 34/83 features complete (41.0%)**
+
+---
+
 ## Notes
 
 - Currently using stub user ID ("user-1") in API routes

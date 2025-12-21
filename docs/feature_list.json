@@ -412,7 +412,7 @@
         "Both from and to matches are included",
         "Clear filter shows all transactions"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F035",

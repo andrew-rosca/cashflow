@@ -34,6 +34,7 @@ export default function TransactionsTab() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'onetime' | 'recurring'>('onetime')
+  const [filterAccountId, setFilterAccountId] = useState<string>('')
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [accountModalTarget, setAccountModalTarget] = useState<'from' | 'to' | null>(null)
   const [newAccountData, setNewAccountData] = useState({
@@ -227,10 +228,21 @@ export default function TransactionsTab() {
     return new Date(dateStr).toLocaleDateString()
   }
 
+  // Filter by one-time vs recurring
   const oneTimeTransactions = transactions.filter(t => !t.recurrence)
   const recurringTransactions = transactions.filter(t => t.recurrence)
 
-  const displayedTransactions = viewMode === 'onetime' ? oneTimeTransactions : recurringTransactions
+  // Apply account filter if selected
+  const applyAccountFilter = (txList: Transaction[]) => {
+    if (!filterAccountId) return txList
+    return txList.filter(t =>
+      t.fromAccountId === filterAccountId || t.toAccountId === filterAccountId
+    )
+  }
+
+  const displayedTransactions = applyAccountFilter(
+    viewMode === 'onetime' ? oneTimeTransactions : recurringTransactions
+  )
 
   if (loading) {
     return <div className="text-center py-8">Loading transactions...</div>
@@ -262,6 +274,34 @@ export default function TransactionsTab() {
             Recurring ({recurringTransactions.length})
           </button>
         </nav>
+      </div>
+
+      {/* Account Filter */}
+      <div className="flex items-center gap-4">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Filter by Account:
+        </label>
+        <select
+          value={filterAccountId}
+          onChange={(e) => setFilterAccountId(e.target.value)}
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        >
+          <option value="">All Transactions</option>
+          {accounts.map(acc => (
+            <option key={acc.id} value={acc.id}>{acc.name}</option>
+          ))}
+        </select>
+        {filterAccountId && (
+          <button
+            onClick={() => setFilterAccountId('')}
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Clear Filter
+          </button>
+        )}
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          Showing {displayedTransactions.length} transaction{displayedTransactions.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {/* Add Transaction Button */}
