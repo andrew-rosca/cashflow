@@ -824,6 +824,58 @@ Current feature status: 13/83 complete (15.7%)
 
 ---
 
+### Session - Date Handling Fixes (December 21, 2025)
+
+**Status**: Fixed critical date handling bugs related to timezone conversion
+
+**Issues Fixed:**
+
+1. **Date Storage Bug**
+   - Dates were being stored incorrectly (e.g., 2025 showing as 2028) due to timezone conversion issues
+   - Problem: Dates created with local timezone were being converted to UTC incorrectly
+   - Solution: Updated all date parsing to use UTC consistently throughout the application
+
+2. **State Race Condition**
+   - When changing dates, the old value was being saved instead of the new value
+   - Problem: `handleCellBlur` was reading stale `editValue` state before React state update completed
+   - Solution: Added `useRef` to store latest date value immediately, ensuring `handleCellBlur` always uses the most recent value
+
+**Changes Made:**
+
+1. **API Routes** (`src/app/api/accounts/route.ts`, `src/app/api/accounts/[id]/route.ts`)
+   - Updated date parsing to use `Date.UTC()` instead of local timezone
+   - Extract date components (year, month, day) and create UTC date: `new Date(Date.UTC(year, month - 1, day))`
+   - Added detailed logging to trace date flow
+
+2. **DateInput Component** (`src/components/DateInput.tsx`)
+   - Updated to use UTC methods (`getUTCFullYear()`, `getUTCMonth()`, `getUTCDate()`) for parsing and display
+   - Updated `commitDate()` to create dates using `Date.UTC()` to avoid timezone shifts
+   - Ensures dates are always handled in UTC regardless of user's timezone
+
+3. **Main Page** (`src/app/page.tsx`)
+   - Updated `handleDateChange` to extract UTC date components
+   - Added `dateValueRef` to store latest date value immediately (fixes race condition)
+   - Updated `handleCellBlur` to use ref value if available, falling back to `editValue`
+   - Updated `getDateString()` and `formatDate()` helpers to use UTC methods
+   - Added detailed logging for debugging
+
+**Technical Details:**
+
+- All dates are now stored and retrieved as UTC dates
+- Date strings (YYYY-MM-DD) are parsed as UTC midnight to avoid timezone conversion issues
+- React state updates are asynchronous, so refs are used to ensure latest values are available immediately
+- Date display uses UTC components to ensure correct year/month/day regardless of user timezone
+
+**Files Modified:**
+- `src/app/api/accounts/route.ts`
+- `src/app/api/accounts/[id]/route.ts`
+- `src/app/page.tsx`
+- `src/components/DateInput.tsx`
+
+**Commit:** `6c9ae6c` - "Fix date handling: use UTC consistently and fix state race condition"
+
+---
+
 ## Notes
 
 - Currently using stub user ID ("user-1") in API routes
@@ -831,4 +883,5 @@ Current feature status: 13/83 complete (15.7%)
 - Projection engine is the most complex feature - may need multiple sessions
 - Automated tests will help catch regressions as we add features
 - UI design can iterate - start simple, refine later
+- Date handling now uses UTC consistently to avoid timezone conversion bugs
 
