@@ -412,8 +412,13 @@ export default function TransactionsTab() {
                 </label>
                 <select
                   value={formData.fromAccountId}
-                  onChange={(e) => handleAccountChange('from', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  onChange={(e) => {
+                    handleAccountChange('from', e.target.value)
+                    setErrors({ ...errors, fromAccountId: undefined })
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.fromAccountId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   required
                 >
                   <option value="">Select account...</option>
@@ -422,6 +427,9 @@ export default function TransactionsTab() {
                   ))}
                   <option value="__create_new__" className="font-semibold text-blue-600 dark:text-blue-400">+ Create New Account</option>
                 </select>
+                {errors.fromAccountId && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.fromAccountId}</p>
+                )}
               </div>
 
               <div>
@@ -430,8 +438,13 @@ export default function TransactionsTab() {
                 </label>
                 <select
                   value={formData.toAccountId}
-                  onChange={(e) => handleAccountChange('to', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  onChange={(e) => {
+                    handleAccountChange('to', e.target.value)
+                    setErrors({ ...errors, toAccountId: undefined })
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.toAccountId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   required
                 >
                   <option value="">Select account...</option>
@@ -440,6 +453,9 @@ export default function TransactionsTab() {
                   ))}
                   <option value="__create_new__" className="font-semibold text-blue-600 dark:text-blue-400">+ Create New Account</option>
                 </select>
+                {errors.toAccountId && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.toAccountId}</p>
+                )}
               </div>
             </div>
 
@@ -452,11 +468,19 @@ export default function TransactionsTab() {
                   type="number"
                   step="0.01"
                   value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  onChange={(e) => {
+                    setFormData({ ...formData, amount: e.target.value })
+                    setErrors({ ...errors, amount: undefined })
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.amount ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   placeholder="0.00"
                   required
                 />
+                {errors.amount && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.amount}</p>
+                )}
               </div>
 
               <div>
@@ -466,10 +490,18 @@ export default function TransactionsTab() {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  onChange={(e) => {
+                    setFormData({ ...formData, date: e.target.value })
+                    setErrors({ ...errors, date: undefined })
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   required
                 />
+                {errors.date && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.date}</p>
+                )}
               </div>
             </div>
 
@@ -494,10 +526,18 @@ export default function TransactionsTab() {
                 type="number"
                 min="0"
                 value={formData.settlementDays}
-                onChange={(e) => setFormData({ ...formData, settlementDays: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                onChange={(e) => {
+                  setFormData({ ...formData, settlementDays: e.target.value })
+                  setErrors({ ...errors, settlementDays: undefined })
+                }}
+                className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  errors.settlementDays ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
                 placeholder="0 for instant, 3 for ACH, etc."
               />
+              {errors.settlementDays && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.settlementDays}</p>
+              )}
             </div>
 
             <div>
@@ -568,10 +608,18 @@ export default function TransactionsTab() {
                       min="0"
                       max="6"
                       value={formData.dayOfWeek}
-                      onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      onChange={(e) => {
+                        setFormData({ ...formData, dayOfWeek: e.target.value })
+                        setErrors({ ...errors, dayOfWeek: undefined })
+                      }}
+                      className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                        errors.dayOfWeek ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="e.g., 1 for Monday"
                     />
+                    {errors.dayOfWeek && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.dayOfWeek}</p>
+                    )}
                   </div>
                 )}
 
@@ -585,10 +633,18 @@ export default function TransactionsTab() {
                       min="1"
                       max="31"
                       value={formData.dayOfMonth}
-                      onChange={(e) => setFormData({ ...formData, dayOfMonth: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      onChange={(e) => {
+                        setFormData({ ...formData, dayOfMonth: e.target.value })
+                        setErrors({ ...errors, dayOfMonth: undefined })
+                      }}
+                      className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                        errors.dayOfMonth ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="e.g., 15 for 15th of each month"
                     />
+                    {errors.dayOfMonth && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.dayOfMonth}</p>
+                    )}
                   </div>
                 )}
               </div>

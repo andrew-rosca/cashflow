@@ -417,7 +417,7 @@
     {
       "id": "F035",
       "category": "auth",
-      "priority": 7,
+      "priority": 14,
       "description": "User authentication system with session management",
       "steps": [
         "NextAuth.js is configured",
@@ -430,7 +430,7 @@
     {
       "id": "F036",
       "category": "auth",
-      "priority": 7,
+      "priority": 14,
       "description": "Apple Sign-In integration",
       "steps": [
         "Configure Apple Developer credentials",
@@ -443,7 +443,7 @@
     {
       "id": "F037",
       "category": "auth",
-      "priority": 7,
+      "priority": 14,
       "description": "Google Sign-In integration",
       "steps": [
         "Configure Google OAuth credentials",
@@ -456,7 +456,7 @@
     {
       "id": "F038",
       "category": "auth",
-      "priority": 7,
+      "priority": 14,
       "description": "User data isolation - users only see their own data",
       "steps": [
         "Create accounts/transactions as user A",
@@ -469,7 +469,7 @@
     {
       "id": "F039",
       "category": "ui",
-      "priority": 8,
+      "priority": 7,
       "description": "Responsive design for mobile devices",
       "steps": [
         "View app on mobile viewport (< 768px)",
@@ -482,7 +482,7 @@
     {
       "id": "F040",
       "category": "ui",
-      "priority": 8,
+      "priority": 7,
       "description": "Dark mode support",
       "steps": [
         "Toggle dark mode from UI",
@@ -495,7 +495,7 @@
     {
       "id": "F041",
       "category": "core",
-      "priority": 8,
+      "priority": 7,
       "description": "Input validation and error handling for accounts",
       "steps": [
         "Submit empty account name returns validation error",
@@ -508,7 +508,7 @@
     {
       "id": "F042",
       "category": "core",
-      "priority": 8,
+      "priority": 7,
       "description": "Input validation and error handling for transactions",
       "steps": [
         "Submit transaction with negative or zero amount returns error",
@@ -516,12 +516,12 @@
         "Submit invalid date returns error",
         "Submit invalid recurrence pattern returns error"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F043",
       "category": "core",
-      "priority": 9,
+      "priority": 8,
       "description": "Monthly recurring transaction on specific day of month",
       "steps": [
         "Create monthly recurring transaction for day 15",
@@ -529,12 +529,12 @@
         "Handle months with fewer days (e.g., Feb 30 -> last day)",
         "Works across year boundaries"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F044",
       "category": "core",
-      "priority": 9,
+      "priority": 8,
       "description": "Weekly recurring transaction on specific day of week",
       "steps": [
         "Create weekly recurring transaction for Wednesday",
@@ -542,12 +542,12 @@
         "Works across month boundaries",
         "Continues indefinitely or until end date"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F045",
       "category": "core",
-      "priority": 9,
+      "priority": 8,
       "description": "Bi-weekly recurring transaction from start date",
       "steps": [
         "Create bi-weekly recurring transaction starting Jan 1",
@@ -555,12 +555,12 @@
         "Works correctly across month and year boundaries",
         "Respects end date or occurrence limit"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F046",
       "category": "core",
-      "priority": 9,
+      "priority": 8,
       "description": "Recurring transaction with limited occurrences",
       "steps": [
         "Create recurring transaction with occurrences=5",
@@ -568,12 +568,12 @@
         "No instances appear after the 5th occurrence",
         "Works with any frequency (daily, weekly, monthly)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F047",
       "category": "ui",
-      "priority": 9,
+      "priority": 8,
       "description": "Recurrence pattern UI for monthly on specific day",
       "steps": [
         "Select 'Monthly' frequency",
@@ -586,7 +586,7 @@
     {
       "id": "F048",
       "category": "ui",
-      "priority": 9,
+      "priority": 8,
       "description": "Recurrence pattern UI for weekly on specific day",
       "steps": [
         "Select 'Weekly' frequency",
@@ -599,7 +599,7 @@
     {
       "id": "F049",
       "category": "ui",
-      "priority": 9,
+      "priority": 8,
       "description": "Recurrence pattern UI for bi-weekly from date",
       "steps": [
         "Select 'Bi-weekly' frequency",
@@ -612,7 +612,7 @@
     {
       "id": "F050",
       "category": "ui",
-      "priority": 9,
+      "priority": 8,
       "description": "Recurrence end options UI",
       "steps": [
         "Choose 'Never' for indefinite recurrence",
@@ -625,7 +625,7 @@
     {
       "id": "F051",
       "category": "ui",
-      "priority": 10,
+      "priority": 9,
       "description": "Loading states for async operations",
       "steps": [
         "Show spinner/skeleton while fetching accounts",
@@ -638,7 +638,7 @@
     {
       "id": "F052",
       "category": "ui",
-      "priority": 10,
+      "priority": 9,
       "description": "Success feedback for user actions",
       "steps": [
         "Show toast/notification on successful account creation",
@@ -651,7 +651,7 @@
     {
       "id": "F053",
       "category": "ui",
-      "priority": 10,
+      "priority": 9,
       "description": "Error feedback for failed operations",
       "steps": [
         "Show error toast/notification on API failure",
@@ -664,7 +664,7 @@
     {
       "id": "F054",
       "category": "ui",
-      "priority": 10,
+      "priority": 9,
       "description": "Empty states for lists with no data",
       "steps": [
         "Show helpful message when no accounts exist",
@@ -677,7 +677,7 @@
     {
       "id": "F055",
       "category": "core",
-      "priority": 11,
+      "priority": 10,
       "description": "Prevent deletion of accounts with existing transactions",
       "steps": [
         "Create account with transactions",
@@ -690,7 +690,7 @@
     {
       "id": "F056",
       "category": "core",
-      "priority": 11,
+      "priority": 10,
       "description": "Cascade delete transactions when account is force deleted",
       "steps": [
         "Enable force delete option for accounts",
@@ -701,100 +701,9 @@
       "passes": false
     },
     {
-      "id": "F057",
-      "category": "ui",
-      "priority": 11,
-      "description": "Search/filter accounts by name",
-      "steps": [
-        "Enter text in account search field",
-        "List filters to show matching accounts only",
-        "Search is case-insensitive",
-        "Clear search shows all accounts again"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F058",
-      "category": "ui",
-      "priority": 11,
-      "description": "Search/filter transactions by description",
-      "steps": [
-        "Enter text in transaction search field",
-        "List filters to show matching transactions only",
-        "Search is case-insensitive",
-        "Clear search shows all transactions again"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F059",
-      "category": "ui",
-      "priority": 11,
-      "description": "Sort transactions by date, amount, or account",
-      "steps": [
-        "Click column header to sort by that field",
-        "Click again to reverse sort order",
-        "Sort indicator shows current sort field and direction",
-        "Sort persists when adding/editing transactions"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F060",
-      "category": "ui",
-      "priority": 11,
-      "description": "Pagination for large transaction lists",
-      "steps": [
-        "Create > 50 transactions",
-        "List shows 20-50 items per page",
-        "Pagination controls allow navigation",
-        "Page number is reflected in URL"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F061",
-      "category": "core",
-      "priority": 12,
-      "description": "Export projections to CSV",
-      "steps": [
-        "Click 'Export' button on projections page",
-        "CSV file downloads with date, account, balance columns",
-        "File name includes date range",
-        "Opens correctly in Excel/Google Sheets"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F062",
-      "category": "core",
-      "priority": 12,
-      "description": "Export transactions to CSV",
-      "steps": [
-        "Click 'Export' button on transactions page",
-        "CSV file downloads with all transaction fields",
-        "Recurring transactions show pattern details",
-        "Opens correctly in Excel/Google Sheets"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F063",
-      "category": "ui",
-      "priority": 12,
-      "description": "Print-friendly projection report",
-      "steps": [
-        "Click 'Print' or use browser print",
-        "Report includes graph, calendar, and summary",
-        "Layout is optimized for paper",
-        "Colors are readable in grayscale"
-      ],
-      "passes": false
-    },
-    {
       "id": "F064",
       "category": "core",
-      "priority": 13,
+      "priority": 12,
       "description": "Projection date range selector (30/60/90 days, custom)",
       "steps": [
         "Select preset: 30 days, 60 days, 90 days",
@@ -805,48 +714,9 @@
       "passes": false
     },
     {
-      "id": "F065",
-      "category": "ui",
-      "priority": 13,
-      "description": "Compare multiple accounts on same graph",
-      "steps": [
-        "Select multiple tracked accounts",
-        "Graph shows separate line for each account",
-        "Lines are color-coded with legend",
-        "Hover shows balance for all accounts on that date"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F066",
-      "category": "ui",
-      "priority": 13,
-      "description": "Net worth view across all tracked accounts",
-      "steps": [
-        "View 'Net Worth' mode on dashboard",
-        "Graph shows sum of all tracked account balances",
-        "Clearly indicates total assets",
-        "Updates as accounts change"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F067",
-      "category": "ui",
-      "priority": 14,
-      "description": "Keyboard shortcuts for common actions",
-      "steps": [
-        "Press 'A' to open new account form",
-        "Press 'T' to open new transaction form",
-        "Press 'Esc' to close modals",
-        "Press '?' to show keyboard shortcut help"
-      ],
-      "passes": false
-    },
-    {
       "id": "F068",
       "category": "ui",
-      "priority": 14,
+      "priority": 13,
       "description": "Accessibility - screen reader support",
       "steps": [
         "Use screen reader to navigate app",
@@ -859,7 +729,7 @@
     {
       "id": "F069",
       "category": "ui",
-      "priority": 14,
+      "priority": 13,
       "description": "Accessibility - keyboard navigation",
       "steps": [
         "Navigate entire app using only keyboard",
@@ -872,7 +742,7 @@
     {
       "id": "F070",
       "category": "ui",
-      "priority": 14,
+      "priority": 13,
       "description": "Accessibility - color contrast meets WCAG AA",
       "steps": [
         "Run accessibility audit tool",
@@ -885,7 +755,7 @@
     {
       "id": "F071",
       "category": "deployment",
-      "priority": 15,
+      "priority": 16,
       "description": "Deploy to Vercel with environment variables",
       "steps": [
         "Connect GitHub repo to Vercel",
@@ -898,7 +768,7 @@
     {
       "id": "F072",
       "category": "deployment",
-      "priority": 15,
+      "priority": 16,
       "description": "Production database is configured and seeded",
       "steps": [
         "Production PostgreSQL database is created",
@@ -911,7 +781,7 @@
     {
       "id": "F073",
       "category": "deployment",
-      "priority": 15,
+      "priority": 16,
       "description": "Production environment monitoring and logging",
       "steps": [
         "Errors are logged to monitoring service",
@@ -924,7 +794,7 @@
     {
       "id": "F074",
       "category": "future",
-      "priority": 16,
+      "priority": 17,
       "description": "Plaid integration adapter interface defined",
       "steps": [
         "Create IntegrationAdapter interface",
@@ -937,7 +807,7 @@
     {
       "id": "F075",
       "category": "future",
-      "priority": 16,
+      "priority": 17,
       "description": "Plaid Link flow for connecting bank accounts",
       "steps": [
         "User clicks 'Connect Bank Account'",
@@ -950,7 +820,7 @@
     {
       "id": "F076",
       "category": "future",
-      "priority": 16,
+      "priority": 17,
       "description": "Auto-sync account balances from Plaid",
       "steps": [
         "Connected accounts sync balance daily",
@@ -963,7 +833,7 @@
     {
       "id": "F077",
       "category": "future",
-      "priority": 16,
+      "priority": 17,
       "description": "Import transactions from Plaid",
       "steps": [
         "Fetch new transactions from Plaid",
@@ -974,48 +844,9 @@
       "passes": false
     },
     {
-      "id": "F078",
-      "category": "future",
-      "priority": 17,
-      "description": "Income/expense reporting by external account",
-      "steps": [
-        "View report page showing income vs expenses",
-        "Group by external account category",
-        "Show totals for selected date range",
-        "Display as table and chart"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F079",
-      "category": "future",
-      "priority": 17,
-      "description": "Cash flow statement generation",
-      "steps": [
-        "Generate cash flow statement for date range",
-        "Show operating, investing, financing activities",
-        "Calculate net change in cash",
-        "Export as PDF or CSV"
-      ],
-      "passes": false
-    },
-    {
-      "id": "F080",
-      "category": "future",
-      "priority": 17,
-      "description": "Budget tracking against external expense accounts",
-      "steps": [
-        "Set budget limits for expense categories",
-        "Track actual spending vs budget",
-        "Show progress bars and alerts",
-        "Warn when approaching or exceeding budget"
-      ],
-      "passes": false
-    },
-    {
       "id": "F081",
       "category": "future",
-      "priority": 17,
+      "priority": 18,
       "description": "Multiple currency support",
       "steps": [
         "Add currency field to accounts",
@@ -1028,7 +859,7 @@
     {
       "id": "F082",
       "category": "future",
-      "priority": 17,
+      "priority": 18,
       "description": "Shared accounts/households",
       "steps": [
         "Create household/group entity",
@@ -1041,7 +872,7 @@
     {
       "id": "F083",
       "category": "future",
-      "priority": 17,
+      "priority": 18,
       "description": "Mobile app (React Native or Flutter)",
       "steps": [
         "Set up mobile app project",
@@ -1054,7 +885,7 @@
     {
       "id": "F084",
       "category": "core",
-      "priority": 8,
+      "priority": 15,
       "description": "Variable recurring transaction amounts",
       "steps": [
         "Add support for recurring transactions with variable amounts",
@@ -1067,7 +898,7 @@
     {
       "id": "F085",
       "category": "core",
-      "priority": 9,
+      "priority": 15,
       "description": "Transaction notes/memo field",
       "steps": [
         "Add notes/memo field to transaction model",
