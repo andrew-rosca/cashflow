@@ -61,9 +61,8 @@ model CashFlowAccount {
   id              String   @id @default(cuid())
   userId          String
   name            String
-  type            String   // "tracked" | "external"
-  category        String?  // For external: "income", "expense", etc.
-  initialBalance  Float?   // For tracked accounts
+  initialBalance  Float    @default(0)
+  balanceAsOf     DateTime @default(now())  // Date when initialBalance was set
   externalId      String?  // For future Plaid integration
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -72,7 +71,7 @@ model CashFlowAccount {
   transactionsFrom      Transaction[] @relation("FromAccount")
   transactionsTo        Transaction[] @relation("ToAccount")
 
-  @@index([userId, type])
+  @@index([userId])
 }
 
 model Transaction {
