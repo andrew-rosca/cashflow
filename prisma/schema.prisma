@@ -100,7 +100,7 @@ model Transaction {
 model Recurrence {
   id           String    @id @default(cuid())
   transactionId String   @unique
-  frequency    String   // "daily" | "weekly" | "biweekly" | "monthly" | "yearly"
+  frequency    String   // "daily" | "weekly" | "monthly" | "yearly"
   interval     Int?
   dayOfWeek    Int?     // 0-6
   dayOfMonth   Int?     // 1-31

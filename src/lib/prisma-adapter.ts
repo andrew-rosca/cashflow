@@ -327,9 +327,6 @@ export class PrismaDataAdapter implements DataAdapter {
         case 'weekly':
           currentDate.setDate(currentDate.getDate() + (7 * interval))
           break
-        case 'biweekly':
-          currentDate.setDate(currentDate.getDate() + 14)
-          break
         case 'monthly':
           currentDate.setMonth(currentDate.getMonth() + interval)
           if (dayOfMonth) {

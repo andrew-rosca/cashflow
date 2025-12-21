@@ -29,7 +29,7 @@ export interface Transaction {
 }
 
 export interface RecurrencePattern {
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
   interval?: number
   dayOfWeek?: number
   dayOfMonth?: number

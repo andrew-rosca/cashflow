@@ -203,7 +203,7 @@ describe('Projection Engine Tests', () => {
     })
 
     it('should materialize bi-weekly recurring transactions', async () => {
-      // Bi-weekly payment starting Jan 1
+      // Bi-weekly payment (every 2 weeks) starting Jan 1
       await adapter.createTransaction(TEST_USER_ID, {
         fromAccountId: expenseAccountId,
         toAccountId: checkingAccountId,
@@ -211,7 +211,8 @@ describe('Projection Engine Tests', () => {
         date: new Date('2026-01-01'),
         description: 'Bi-weekly paycheck',
         recurrence: {
-          frequency: 'biweekly',
+          frequency: 'weekly',
+          interval: 2,
         },
       })
 
