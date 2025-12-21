@@ -147,7 +147,125 @@ occurrences?: number           // If limited count
 
 ## User Interface
 
+### Design Philosophy
+The interface is designed to feel like working with a spreadsheet: frictionless, direct manipulation of data, with minimal modals or navigation. Most values are editable inline by clicking on them, providing immediate feedback and eliminating unnecessary clicks.
+
 ### Main Screen Components
+
+**Layout**: Two-column layout with sidebar and main content area.
+
+#### Left Sidebar
+
+**1. Current Balances Section**
+- Displays all tracked accounts with their balance as of a specific date
+- Each account shows: name, balance date, and balance amount
+- **Interactions**:
+  - Click account name → Opens dialog to rename or delete account
+  - Click balance date → Inline edit the date
+  - Click balance amount → Inline edit the amount
+  - Plus button (+) → Instantly creates new account
+- Negative balances display in red
+- All amounts display without currency symbols (e.g., `2500.00` not `$2,500.00`)
+
+**2. Upcoming Transactions Section**
+- Displays all future transactions in chronological order
+- Each transaction shows date, description, and amount on a single line
+- Recurring transactions marked with circular arrow icon (↻)
+
+**One-time transactions:**
+- **Interactions**:
+  - Click date → Inline edit the date
+  - Click description → Inline edit the description
+  - Click amount → Inline edit the amount
+  - All inline edits save on blur or Enter key; ESC cancels
+
+**Recurring transactions:**
+- **Interactions**:
+  - Click icon, date, description, or amount → Opens dialog to edit full transaction including recurrence pattern
+
+**Add Transaction:**
+- Plus button (+) → Opens dialog with:
+  - Required: date, amount
+  - Optional: description, account selection
+  - Checkbox: "Make this recurring"
+    - When checked, expands to show frequency, end date options
+
+#### Right Content Area
+
+**3. Balance Projection Table**
+- Rows: dates (shows projection timeline)
+- Columns: tracked accounts
+- Cells: projected balance for each account on each date
+- Negative balances highlighted in red
+- All amounts without currency symbols
+- Updates dynamically as accounts/transactions change
+
+### Visual Design Principles
+- **Spreadsheet-like UX**: Direct manipulation, inline editing
+- **Minimal chrome**: No page title, clean layout, focus on data
+- **Hover feedback**: Subtle background change on editable elements
+- **Active state**: Blue border on focused input fields
+- **Color coding**: Red for negative amounts, consistent throughout
+- **No currency symbols**: Display raw numbers for cleaner, more spreadsheet-like appearance
+- **Single-line layout**: Transactions show all info (date, description, amount) in one compact row
+
+### Dialogs
+
+**Account Management Dialog**
+- Triggered by clicking account name
+- Contains: account name field, delete button, cancel button
+- Changes persist on Enter or when dialog closes
+
+**Transaction Dialog** (Add/Edit)
+- Triggered by plus button or clicking recurring transaction
+- Required fields: date, amount
+- Optional fields: description
+- Account dropdown: select from tracked accounts
+- "Make this recurring" checkbox
+  - Expands to show: frequency dropdown (daily, weekly, bi-weekly, monthly, yearly), optional end date
+- Buttons: Cancel, Save/Add
+
+**Dialog Behavior**
+- Modal overlay (dark backdrop)
+- Centered on screen
+- Click outside or Cancel to close without saving
+- Enter key or Save/Add button to submit
+
+### User Flows
+
+**Editing a balance:**
+1. Click on amount → Input appears
+2. Type new value
+3. Press Enter or click away → Saved
+
+**Adding an account:**
+1. Click + button in Current Balances
+2. New account appears instantly with default values
+3. Click account name to rename
+
+**Editing a one-time transaction:**
+1. Click on date, description, or amount
+2. Inline input appears
+3. Edit value, press Enter → Saved
+
+**Editing a recurring transaction:**
+1. Click anywhere on transaction (icon, date, description, amount)
+2. Dialog opens with all fields
+3. Edit values including recurrence pattern
+4. Click Save → Changes persist
+
+**Adding a transaction:**
+1. Click + button in Upcoming Transactions
+2. Dialog opens
+3. Fill required fields (date, amount)
+4. Optionally check "Make this recurring"
+5. Click Add → Transaction created
+
+---
+
+## Legacy UI Documentation (for reference)
+
+### Previous Main Screen Components
 
 1. **Transaction Lists** (separated views)
    - One-time transactions

@@ -1,6 +1,207 @@
 {
   "features": [
     {
+      "id": "F100",
+      "category": "ui",
+      "priority": 1,
+      "description": "Inline editing for account balance dates in Current Balances section",
+      "steps": [
+        "Clicking on account balance date shows inline input field",
+        "User can edit the date value directly",
+        "Changes save on blur or Enter key press",
+        "ESC key cancels editing"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F101",
+      "category": "ui",
+      "priority": 1,
+      "description": "Inline editing for account balance amounts in Current Balances section",
+      "steps": [
+        "Clicking on account balance amount shows inline input field",
+        "User can edit the amount value directly",
+        "Changes save on blur or Enter key press",
+        "ESC key cancels editing",
+        "Amount displays without currency symbols (e.g., 2500.00)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F102",
+      "category": "ui",
+      "priority": 1,
+      "description": "Account management dialog from Current Balances section",
+      "steps": [
+        "Clicking on account name opens edit account dialog",
+        "Dialog allows editing account name",
+        "Dialog includes delete account button",
+        "Changes persist when dialog is closed",
+        "Account is removed from list when deleted"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F103",
+      "category": "ui",
+      "priority": 1,
+      "description": "Add new account button in Current Balances section",
+      "steps": [
+        "Plus button is visible in Current Balances header",
+        "Clicking plus button creates new account instantly",
+        "New account appears in the list immediately",
+        "New account has default values (name, balance, date)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F104",
+      "category": "ui",
+      "priority": 1,
+      "description": "Inline editing for one-time transaction dates",
+      "steps": [
+        "Clicking on one-time transaction date shows inline input field",
+        "User can edit the date value directly",
+        "Changes save on blur or Enter key press",
+        "ESC key cancels editing"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F105",
+      "category": "ui",
+      "priority": 1,
+      "description": "Inline editing for one-time transaction amounts",
+      "steps": [
+        "Clicking on one-time transaction amount shows inline input field",
+        "User can edit the amount value directly",
+        "Changes save on blur or Enter key press",
+        "ESC key cancels editing",
+        "Amount displays without currency symbols"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F106",
+      "category": "ui",
+      "priority": 1,
+      "description": "Inline editing for one-time transaction descriptions",
+      "steps": [
+        "Clicking on one-time transaction description shows inline input field",
+        "User can edit the description value directly",
+        "Changes save on blur or Enter key press",
+        "ESC key cancels editing"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F107",
+      "category": "ui",
+      "priority": 1,
+      "description": "Single-line transaction layout in Upcoming Transactions",
+      "steps": [
+        "Each transaction displays date, description, and amount on one line",
+        "Date, description, and amount are separate clickable elements",
+        "Recurring transactions show icon, date, description, and amount inline",
+        "Layout is compact and spreadsheet-like"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F108",
+      "category": "ui",
+      "priority": 1,
+      "description": "Recurring transaction dialog for editing",
+      "steps": [
+        "Clicking on any part of recurring transaction (icon, date, description, amount) opens dialog",
+        "Dialog shows all transaction fields including recurrence settings",
+        "User can edit date, amount, description, account, and recurrence pattern",
+        "Changes persist when dialog is submitted"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F109",
+      "category": "ui",
+      "priority": 1,
+      "description": "Add transaction dialog with recurring option",
+      "steps": [
+        "Plus button in Upcoming Transactions opens add transaction dialog",
+        "Dialog requires date and amount, description is optional",
+        "Dialog includes checkbox to make transaction recurring",
+        "When recurring checkbox is checked, additional fields appear (frequency, end date)",
+        "New transaction is created when dialog is submitted"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F110",
+      "category": "ui",
+      "priority": 1,
+      "description": "Current Balances section displays all tracked accounts",
+      "steps": [
+        "Section shows account name, balance date, and balance amount",
+        "Negative balances display in red",
+        "Positive balances display in default color",
+        "All amounts display without currency symbols"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F111",
+      "category": "ui",
+      "priority": 1,
+      "description": "Upcoming Transactions section displays all transactions",
+      "steps": [
+        "Section shows both one-time and recurring transactions",
+        "Recurring transactions have a distinct icon (circular arrow)",
+        "Transactions display date, description, and amount on one line",
+        "Negative amounts display in red",
+        "All amounts display without currency symbols"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F112",
+      "category": "ui",
+      "priority": 2,
+      "description": "Balance projection table shows projected balances by account",
+      "steps": [
+        "Table displays dates in rows and accounts in columns",
+        "Each cell shows projected balance for that account on that date",
+        "Negative balances display in red",
+        "All amounts display without currency symbols",
+        "Table updates when accounts or transactions change"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F113",
+      "category": "ui",
+      "priority": 2,
+      "description": "Visual feedback for interactive elements",
+      "steps": [
+        "Hovering over editable elements shows hover state (background change)",
+        "Active input fields show blue border",
+        "Cursor changes to pointer for clickable elements",
+        "Cursor changes to text cursor for editable text"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F114",
+      "category": "ui",
+      "priority": 2,
+      "description": "Dialog backdrop and modal behavior",
+      "steps": [
+        "Dialogs appear centered on screen with dark backdrop",
+        "Clicking outside dialog closes it",
+        "Dialog prevents interaction with background content",
+        "Cancel button closes dialog without saving changes"
+      ],
+      "passes": false
+    },
+    {
       "id": "F001",
       "category": "core",
       "priority": 1,
