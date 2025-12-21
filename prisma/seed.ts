@@ -22,25 +22,25 @@ async function main() {
   await prisma.transaction.deleteMany({ where: { userId: user.id } })
   await prisma.cashFlowAccount.deleteMany({ where: { userId: user.id } })
 
-  // Create single tracked account
+  // Get today's date
+  const today = new Date()
+
+  // Create accounts with balanceAsOf set to today
   const checkingAccount = await prisma.cashFlowAccount.create({
     data: {
       userId: user.id,
       name: 'Main Checking',
-      type: 'tracked',
       initialBalance: 3500,
+      balanceAsOf: today,
     },
   })
 
-  console.log('✅ Created tracked account: Main Checking')
-
-  // Create external accounts (simplified to just Income and Expenses)
   const income = await prisma.cashFlowAccount.create({
     data: {
       userId: user.id,
       name: 'Income',
-      type: 'external',
-      category: 'income',
+      initialBalance: 0,
+      balanceAsOf: today,
     },
   })
 
@@ -48,15 +48,14 @@ async function main() {
     data: {
       userId: user.id,
       name: 'Expenses',
-      type: 'external',
-      category: 'expense',
+      initialBalance: 0,
+      balanceAsOf: today,
     },
   })
 
-  console.log('✅ Created external accounts: Income, Expenses')
+  console.log('✅ Created accounts: Main Checking, Income, Expenses')
 
   // Helper function to get dates
-  const today = new Date()
   const daysFromNow = (days: number) => {
     const date = new Date(today)
     date.setDate(date.getDate() + days)
@@ -127,8 +126,7 @@ async function main() {
   console.log('✅ Created recurring credit card payment (monthly on 25th)')
 
   console.log('\n🎉 Seeding complete!')
-  console.log('📊 Created 1 tracked account (Main Checking)')
-  console.log('📊 Created 2 external accounts (Income, Expenses)')
+  console.log('📊 Created 3 accounts (Main Checking, Income, Expenses)')
   console.log('💰 Created 3 recurring transactions (Paycheck, Rent, Credit Card)')
   console.log('\n✨ You can now view the app with sample data at http://localhost:3000')
 }
