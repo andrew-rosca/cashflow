@@ -7,10 +7,7 @@ const getCurrentUserId = () => 'user-1' // TODO: Replace with actual auth
 export async function GET(request: NextRequest) {
   try {
     const userId = getCurrentUserId()
-    const { searchParams } = new URL(request.url)
-    const type = searchParams.get('type') as 'tracked' | 'external' | null
-
-    const accounts = await dataAdapter.getAccounts(userId, type ?? undefined)
+    const accounts = await dataAdapter.getAccounts(userId)
     return NextResponse.json(accounts)
   } catch (error) {
     console.error('Error fetching accounts:', error)
