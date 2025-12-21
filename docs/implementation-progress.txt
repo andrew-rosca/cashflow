@@ -649,6 +649,61 @@ Current feature status: 13/83 complete (15.7%)
 
 ---
 
+### Session 7 - Inline Account Creation (December 20, 2025)
+
+**Status**: Inline account creation feature complete with tests
+
+**Completed Features:**
+- ✅ F027: Inline account creation during transaction entry
+
+**Changes Made:**
+
+1. **Verified Existing Implementation** ([TransactionsTab.tsx](src/components/TransactionsTab.tsx))
+   - Inline account creation was already implemented in the UI
+   - "+ Create New Account" option appears in both from/to account dropdowns
+   - Modal dialog for quick account creation
+   - Newly created account is automatically selected in the form
+
+2. **Created Comprehensive Test Suite** (`tests/features/inline-account-creation.test.ts`)
+   - 4 tests covering all inline account creation scenarios
+   - Tests account creation for both "from" and "to" fields
+   - Tests immediate account listing after creation
+   - Tests minimal account creation (just name, no balance)
+   - All tests passing ✅
+
+3. **Updated Feature List**
+   - Marked F027 as passing in `docs/feature_list.json`
+
+**What Works:**
+- User can create new accounts without leaving transaction form
+- Click "+ Create New Account" in dropdown
+- Modal opens with account name and initial balance fields
+- Account is created via API and immediately available
+- Newly created account is auto-selected in the transaction form
+- Works for both "from account" and "to account" fields
+- UI updates reactively with new account in the list
+
+**Testing Coverage:**
+- All 39 tests passing (100% pass rate)
+- 6 test files covering all implemented features
+- Feature verified through automated tests
+- UI implementation confirmed in browser at http://localhost:3000
+
+**Technical Highlights:**
+- Modal-based inline creation provides clean UX
+- Account creation integrated seamlessly with transaction workflow
+- Reactive state management updates all dropdowns immediately
+- Test suite uses PrismaDataAdapter directly for speed and reliability
+
+**Next Steps:**
+1. Implement transaction list filtering by account (F034)
+2. Add proper authentication (F035-F038)
+3. Polish UI features (loading states, error handling, validation)
+
+**Progress: 33/83 features complete (39.8%)**
+
+---
+
 ## Notes
 
 - Currently using stub user ID ("user-1") in API routes

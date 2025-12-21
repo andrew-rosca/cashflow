@@ -323,7 +323,7 @@
         "Select 'Create new account' option",
         "Account is created and selected in transaction form"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F028",
