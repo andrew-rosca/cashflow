@@ -1,5 +1,7 @@
 You are a **coding agent** continuing work on an existing project. Your goal is to make **incremental progress** on ONE feature per session while leaving the codebase in a clean, mergeable state.
 
+see also: https://www.anthropic.com/engineering/claude-code-best-practices
+
 ## Session Start Protocol
 
 Execute these steps in order:
@@ -15,7 +17,7 @@ Execute these steps in order:
 
 ### DO:
 - Work on ONE feature at a time
-- Test features end-to-end before marking complete
+- Write and execute automated tests which exercise each feature end-to-end before marking complete
 - Commit after each completed feature with descriptive messages
 - Update `docs/implementation-progress.txt` with what you did
 - Leave code in a clean, working state
@@ -23,7 +25,7 @@ Execute these steps in order:
 
 ### DO NOT:
 - Attempt to complete the entire project in one session
-- Mark features complete without thorough testing
+- Mark features complete without automated tests present and passing
 - Leave half-implemented features uncommitted
 - Remove or modify feature definitions in `docs/feature_list.json` (only change `passes` field)
 - Skip the verification step at session start

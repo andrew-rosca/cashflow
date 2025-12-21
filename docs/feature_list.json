@@ -10,7 +10,7 @@
         "Prisma client generates without errors",
         "Database schema is created"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F002",
@@ -22,7 +22,7 @@
         "Response includes id, userId, name, type, initialBalance",
         "Account is persisted in database"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F003",
@@ -34,7 +34,7 @@
         "Response includes id, userId, name, type, category",
         "Account is persisted in database"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F004",
@@ -46,7 +46,7 @@
         "Can filter by type=tracked",
         "Can filter by type=external"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F005",
@@ -58,7 +58,7 @@
         "Returns 404 for non-existent account",
         "User can only access their own accounts"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",
@@ -70,7 +70,7 @@
         "Response includes updated account data",
         "Changes are persisted in database"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",
@@ -82,7 +82,7 @@
         "Returns 204 on success",
         "Account no longer appears in listings"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",
@@ -94,7 +94,7 @@
         "Response includes all transaction fields",
         "Transaction is persisted with correct from/to accounts"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
@@ -106,7 +106,7 @@
         "Recurrence pattern is stored correctly",
         "All recurrence fields (frequency, interval, dayOfWeek, etc.) are saved"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F010",
@@ -118,7 +118,7 @@
         "Can filter by accountId (fromAccountId or toAccountId)",
         "Can filter by date range (startDate, endDate)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",
@@ -130,7 +130,7 @@
         "Includes recurrence pattern if recurring",
         "Returns 404 for non-existent transaction"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",
@@ -142,7 +142,7 @@
         "Can update amount, date, description",
         "Changes are persisted in database"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",
@@ -154,7 +154,7 @@
         "Cascades to recurrence pattern if exists",
         "Transaction no longer appears in listings"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",

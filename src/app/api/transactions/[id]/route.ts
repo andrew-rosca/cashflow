@@ -49,7 +49,7 @@ export async function DELETE(
   try {
     const userId = getCurrentUserId()
     await dataAdapter.deleteTransaction(userId, params.id)
-    return NextResponse.json({ success: true }, { status: 204 })
+    return new NextResponse(null, { status: 204 })
   } catch (error) {
     console.error('Error deleting transaction:', error)
     return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })

@@ -45,7 +45,7 @@ export async function DELETE(
   try {
     const userId = getCurrentUserId()
     await dataAdapter.deleteAccount(userId, params.id)
-    return NextResponse.json({ success: true }, { status: 204 })
+    return new NextResponse(null, { status: 204 })
   } catch (error) {
     console.error('Error deleting account:', error)
     return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })

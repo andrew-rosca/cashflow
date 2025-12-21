@@ -305,7 +305,87 @@ When working on features:
 5. **Update this file** - Log decisions, issues, progress
 6. **Leave it working** - Every session should end with a runnable app
 
-Current feature status: 0/83 complete (0%)
+Current feature status: 13/83 complete (15.7%)
+
+---
+
+## Session Log
+
+### Session 2 - API Implementation & Testing (December 20, 2025)
+
+**Status**: Core API features complete with automated tests
+
+**Completed Features:**
+- ✅ F001: Database connection and Prisma client setup (SQLite)
+- ✅ F002: Create tracked account via API
+- ✅ F003: Create external account via API
+- ✅ F004: List accounts with filtering (tracked/external)
+- ✅ F005: Get single account by ID
+- ✅ F006: Update account via API
+- ✅ F007: Delete account via API
+- ✅ F008: Create one-time transaction via API
+- ✅ F009: Create recurring transaction via API
+- ✅ F010: List transactions with filtering (by account, date range)
+- ✅ F011: Get single transaction by ID
+- ✅ F012: Update transaction via API
+- ✅ F013: Delete transaction via API
+
+**Changes Made:**
+
+1. **Switched to SQLite for local development**
+   - Updated `prisma/schema.prisma` to use SQLite datasource
+   - Removed PostgreSQL-specific `@db.Text` annotations
+   - Updated `.env` and `.env.example` with SQLite connection string
+   - Benefits: No database server setup required, easier local development
+
+2. **Fixed Prisma Schema**
+   - Added missing `cashFlowAccounts` relation field on `User` model
+   - Fixed foreign key constraint errors
+
+3. **Fixed API Response Issues**
+   - DELETE endpoints now return `new NextResponse(null, { status: 204 })` instead of JSON
+   - Fixed "Invalid response status code 204" error in both accounts and transactions endpoints
+
+4. **Created Test User Seed Script**
+   - Added `scripts/seed-user.js` to create stub user "user-1"
+   - Required for foreign key constraints to work with stub auth
+
+5. **Added Automated Testing**
+   - Installed Vitest testing framework
+   - Created `tests/api/accounts.test.ts` with 9 tests for F002-F007
+   - Created `tests/api/transactions.test.ts` with 8 tests for F008-F013
+   - All 17 tests passing ✅
+   - Added `npm test` and `npm test:watch` scripts
+
+**Testing Coverage:**
+- Account creation (tracked and external types)
+- Account listing and filtering
+- Account retrieval, update, and deletion
+- Transaction creation (one-time and recurring)
+- Transaction listing and filtering
+- Transaction retrieval, update, and deletion
+- Error cases (404 for non-existent resources)
+
+**What Works:**
+- All Account CRUD operations (create, read, update, delete)
+- Account filtering by type (tracked/external)
+- All Transaction CRUD operations with recurrence patterns
+- Transaction filtering by account ID
+- Database schema and migrations
+- Development server runs successfully
+- Automated test suite validates all API functionality
+
+**Known Issues/Limitations:**
+- Still using stub user ID ("user-1") - authentication not yet implemented
+- User isolation not enforced (would need proper auth first)
+- F014 (settlement lag) not yet implemented
+- Projection engine (F015-F018) not yet implemented
+
+**Next Steps:**
+1. Implement settlement lag for transfers (F014)
+2. Build projection engine (F015-F018) - most complex feature
+3. Build UI components (F019+)
+4. Add proper authentication (F035-F038)
 
 ---
 
@@ -314,5 +394,6 @@ Current feature status: 0/83 complete (0%)
 - Currently using stub user ID ("user-1") in API routes
 - Need to implement real authentication before production
 - Projection engine is the most complex feature - may need multiple sessions
-- Consider adding tests for projection logic given its complexity
+- Automated tests will help catch regressions as we add features
 - UI design can iterate - start simple, refine later
+
