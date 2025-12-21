@@ -357,13 +357,6 @@ export default function Home() {
     return tx.amount
   }
 
-  // Calculate projection dates (next 90 days, sampled)
-  const today = new Date()
-  const projectionDates: Date[] = []
-  for (let i = 0; i < 90; i += 3) {
-    projectionDates.push(addDays(today, i))
-  }
-
   // Get projected balance for account on date
   const getProjectedBalance = (accountId: string, date: Date): number | null => {
     const dateStr = format(date, 'yyyy-MM-dd')
@@ -372,6 +365,53 @@ export default function Home() {
     )
     return projection ? projection.balance : null
   }
+
+  // Get all unique dates from projections
+  const getAllProjectionDates = (): Date[] => {
+    const dateSet = new Set<string>()
+    projections.forEach(p => {
+      const dateStr = format(new Date(p.date), 'yyyy-MM-dd')
+      dateSet.add(dateStr)
+    })
+    return Array.from(dateSet)
+      .map(d => parseISO(d))
+      .sort((a, b) => a.getTime() - b.getTime())
+  }
+
+  // Filter dates to only show rows where balance changes
+  const getDatesWithBalanceChanges = (): Date[] => {
+    const allDates = getAllProjectionDates()
+    if (allDates.length === 0) return []
+
+    const datesWithChanges: Date[] = [allDates[0]] // Always include first date
+
+    for (let i = 1; i < allDates.length; i++) {
+      const currentDate = allDates[i]
+      const previousDate = allDates[i - 1]
+      
+      // Check if any account's balance changed between these dates
+      const hasChange = accounts.some(account => {
+        const currentBalance = getProjectedBalance(account.id, currentDate)
+        const previousBalance = getProjectedBalance(account.id, previousDate)
+        
+        // If either is null, we can't compare, so include the date
+        if (currentBalance === null || previousBalance === null) {
+          return currentBalance !== previousBalance
+        }
+        
+        // Include if balance changed
+        return currentBalance !== previousBalance
+      })
+
+      if (hasChange) {
+        datesWithChanges.push(currentDate)
+      }
+    }
+
+    return datesWithChanges
+  }
+
+  const projectionDates = getDatesWithBalanceChanges()
 
   // Separate one-time and recurring transactions
   const oneTimeTransactions = transactions.filter(t => !t.recurrence)
