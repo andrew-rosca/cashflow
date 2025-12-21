@@ -360,7 +360,7 @@
         "X-axis shows dates, Y-axis shows balance",
         "Graph updates based on selected account filter"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F031",
@@ -373,7 +373,7 @@
         "Zero line is clearly marked",
         "Hover shows exact balance on each date"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F032",
@@ -386,7 +386,7 @@
         "One-time and materialized recurring transactions appear",
         "Dates with negative balance are highlighted"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F033",
@@ -399,7 +399,7 @@
         "Graph and calendar update to show filtered data",
         "Selected filter persists on page refresh"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F034",

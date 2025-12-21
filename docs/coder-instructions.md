@@ -17,6 +17,7 @@ Execute these steps in order:
 
 ### DO:
 - Work on ONE feature at a time
+- operate in TDD fashion--write failing tests first, then write the code to add functionality and pass the tests
 - Write and execute automated tests which exercise each feature end-to-end before marking complete
 - Commit after each completed feature with descriptive messages
 - Update `docs/implementation-progress.txt` with what you did
