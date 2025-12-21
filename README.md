@@ -30,8 +30,14 @@ A personal finance application that helps you project future account balances ba
 ## Project Structure
 
 ```
+├── docs/
+│   ├── specification.md      # Project requirements
+│   ├── feature_list.json     # All features to implement
+│   ├── implementation-progress.txt  # Development log
+│   ├── coder-instructions.md # Guidelines for coding sessions
+│   └── initializer-instructions.md  # Setup guidelines
 ├── prisma/
-│   └── schema.prisma          # Database schema
+│   └── schema.prisma         # Database schema
 ├── src/
 │   ├── app/
 │   │   ├── api/              # API routes
@@ -44,22 +50,22 @@ A personal finance application that helps you project future account balances ba
 │       ├── db.ts             # Prisma client
 │       ├── data-adapter.ts   # Data adapter interface
 │       └── prisma-adapter.ts # Prisma implementation
-├── feature_list.json         # All features to implement
-├── implementation-progress.txt       # Development log
 └── init.sh                   # Setup script
 ```
 
 ## Development Workflow
 
 1. Run `./init.sh` to start the development environment
-2. Check `feature_list.json` for the next feature to implement
+2. Check `docs/feature_list.json` for the next feature to implement
 3. Test features end-to-end before marking them complete
-4. Update `implementation-progress.txt` with progress and decisions
+4. Update `docs/implementation-progress.txt` with progress and decisions
 5. Commit completed features with clear messages
 
 ## Features
 
-See `feature_list.json` for the complete feature list and implementation status.
+See `docs/feature_list.json` for the complete feature list and implementation status.
+
+For detailed project requirements, see `docs/specification.md`.
 
 ## API Endpoints
 

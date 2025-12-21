@@ -221,9 +221,12 @@ All endpoints:
 - `src/app/api/transactions/[id]/route.ts` - Single transaction API
 - `src/app/api/projections/route.ts` - Projection calculation API (stub)
 - `init.sh` - Setup and development start script
-- `feature_list.json` - 83 features defined across 17 priority levels
+- `docs/feature_list.json` - 83 features defined across 17 priority levels
+- `docs/specification.md` - Complete project requirements
+- `docs/coder-instructions.md` - Guidelines for coding sessions
+- `docs/initializer-instructions.md` - Setup guidelines
+- `docs/implementation-progress.txt` - This file
 - `README.md` - Project documentation
-- `claude-progress.txt` - This file
 
 **Architecture Decisions:**
 1. Chose Next.js for unified frontend/backend
