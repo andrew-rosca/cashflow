@@ -28,9 +28,19 @@ export async function POST(request: NextRequest) {
     const userId = getCurrentUserId()
     const body = await request.json()
 
-    // Convert date string to Date object
+    // Parse date as local date to avoid timezone shifts
     if (body.date) {
-      body.date = new Date(body.date)
+      const dateStr = typeof body.date === 'string' ? body.date : body.date.toISOString()
+      // Extract date part and create at local midnight
+      const dateOnly = dateStr.split('T')[0]
+      body.date = new Date(dateOnly + 'T00:00:00')
+    }
+    
+    // Handle recurrence endDate similarly
+    if (body.recurrence?.endDate) {
+      const dateStr = typeof body.recurrence.endDate === 'string' ? body.recurrence.endDate : body.recurrence.endDate.toISOString()
+      const dateOnly = dateStr.split('T')[0]
+      body.recurrence.endDate = new Date(dateOnly + 'T00:00:00')
     }
 
     const transaction = await dataAdapter.createTransaction(userId, body)

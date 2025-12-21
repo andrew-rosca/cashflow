@@ -133,10 +133,14 @@ export default function Home() {
     try {
       if (parts[0] === 'account' && parts[1] === 'date') {
         const accountId = parts[2]
+        // Use date string directly (YYYY-MM-DD) to avoid timezone issues
+        // Create date at local midnight to avoid timezone shifts
+        const dateStr = editValue // Already in YYYY-MM-DD format from date input
+        const localDate = new Date(dateStr + 'T00:00:00')
         await fetch(`/api/accounts/${accountId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ balanceAsOf: new Date(editValue).toISOString() }),
+          body: JSON.stringify({ balanceAsOf: localDate.toISOString() }),
         })
         loadAccounts()
       } else if (parts[0] === 'account' && parts[1] === 'balance') {
@@ -149,10 +153,14 @@ export default function Home() {
         loadAccounts()
       } else if (parts[0] === 'tx' && parts[1] === 'date') {
         const txId = parts[2]
+        // Use date string directly (YYYY-MM-DD) to avoid timezone issues
+        // Create date at local midnight to avoid timezone shifts
+        const dateStr = editValue // Already in YYYY-MM-DD format from date input
+        const localDate = new Date(dateStr + 'T00:00:00')
         await fetch(`/api/transactions/${txId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: new Date(editValue).toISOString() }),
+          body: JSON.stringify({ date: localDate.toISOString() }),
         })
         loadTransactions()
       } else if (parts[0] === 'tx' && parts[1] === 'amount') {
@@ -241,7 +249,7 @@ export default function Home() {
         body: JSON.stringify({
           name: 'New Account',
           initialBalance: 0,
-          balanceAsOf: new Date().toISOString(),
+          balanceAsOf: new Date().toISOString().split('T')[0] + 'T00:00:00',
         }),
       })
       loadAccounts()
@@ -275,11 +283,15 @@ export default function Home() {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     
+    // Parse dates as local dates to avoid timezone issues
+    const dateStr = formData.get('date') as string
+    const localDate = new Date(dateStr + 'T00:00:00')
+    
     const payload: any = {
       fromAccountId: formData.get('fromAccountId') as string,
       toAccountId: formData.get('toAccountId') as string,
       amount: parseFloat(formData.get('amount') as string),
-      date: new Date(formData.get('date') as string).toISOString(),
+      date: localDate.toISOString(),
       description: (formData.get('description') as string) || undefined,
     }
 
@@ -288,7 +300,9 @@ export default function Home() {
         frequency: formData.get('frequency') as string,
       }
       if (formData.get('endDate')) {
-        payload.recurrence.endDate = new Date(formData.get('endDate') as string).toISOString()
+        const endDateStr = formData.get('endDate') as string
+        const localEndDate = new Date(endDateStr + 'T00:00:00')
+        payload.recurrence.endDate = localEndDate.toISOString()
       }
       if (formData.get('dayOfWeek')) {
         payload.recurrence.dayOfWeek = parseInt(formData.get('dayOfWeek') as string)
@@ -325,8 +339,29 @@ export default function Home() {
   }
 
   const formatDate = (dateStr: string | Date) => {
-    const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr
+    // Parse date as local date to avoid timezone shifts
+    let date: Date
+    if (typeof dateStr === 'string') {
+      // If it's an ISO string, extract just the date part and parse as local
+      const dateOnly = dateStr.split('T')[0]
+      date = new Date(dateOnly + 'T00:00:00')
+    } else {
+      date = dateStr
+    }
     return format(date, 'MMM d')
+  }
+  
+  // Helper to get date string in YYYY-MM-DD format from a date
+  const getDateString = (date: Date | string): string => {
+    if (typeof date === 'string') {
+      // Extract date part from ISO string
+      return date.split('T')[0]
+    }
+    // Format as YYYY-MM-DD in local timezone
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   // Get account name helper
@@ -443,8 +478,15 @@ export default function Home() {
               </div>
               <div className="space-y-1">
                 {accounts.map(account => {
+                  // Parse balanceAsOf as local date to avoid timezone issues
                   const balanceAsOf = account.balanceAsOf 
-                    ? (typeof account.balanceAsOf === 'string' ? parseISO(account.balanceAsOf) : account.balanceAsOf)
+                    ? (() => {
+                        if (typeof account.balanceAsOf === 'string') {
+                          const dateOnly = account.balanceAsOf.split('T')[0]
+                          return new Date(dateOnly + 'T00:00:00')
+                        }
+                        return account.balanceAsOf
+                      })()
                     : new Date()
                   return (
                     <div
@@ -470,7 +512,7 @@ export default function Home() {
                       ) : (
                         <span 
                           className="text-xs text-gray-500 dark:text-gray-400 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded"
-                          onClick={() => handleCellClick(`account-date-${account.id}`, format(balanceAsOf, 'yyyy-MM-dd'))}
+                          onClick={() => handleCellClick(`account-date-${account.id}`, getDateString(balanceAsOf))}
                         >
                           {formatDate(balanceAsOf)}
                         </span>
@@ -572,7 +614,7 @@ export default function Home() {
                         ) : (
                           <span 
                             className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded"
-                            onClick={() => handleCellClick(`tx-date-${tx.id}`, format(parseISO(tx.date), 'yyyy-MM-dd'))}
+                            onClick={() => handleCellClick(`tx-date-${tx.id}`, getDateString(tx.date))}
                           >
                             {formatDate(tx.date)}
                           </span>
@@ -785,7 +827,7 @@ export default function Home() {
                     type="date"
                     name="date"
                     required
-                    defaultValue={selectedTransaction ? format(parseISO(selectedTransaction.date), 'yyyy-MM-dd') : ''}
+                    defaultValue={selectedTransaction ? getDateString(selectedTransaction.date) : ''}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -881,7 +923,7 @@ export default function Home() {
                       <input
                         type="date"
                         name="endDate"
-                        defaultValue={selectedTransaction?.recurrence?.endDate ? format(parseISO(selectedTransaction.recurrence.endDate), 'yyyy-MM-dd') : ''}
+                        defaultValue={selectedTransaction?.recurrence?.endDate ? getDateString(selectedTransaction.recurrence.endDate) : ''}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>

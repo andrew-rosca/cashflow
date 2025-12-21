@@ -30,6 +30,14 @@ export async function PUT(
     const userId = getCurrentUserId()
     const body = await request.json()
 
+    // Parse balanceAsOf as local date to avoid timezone shifts
+    if (body.balanceAsOf) {
+      const dateStr = typeof body.balanceAsOf === 'string' ? body.balanceAsOf : body.balanceAsOf.toISOString()
+      // Extract date part and create at local midnight
+      const dateOnly = dateStr.split('T')[0]
+      body.balanceAsOf = new Date(dateOnly + 'T00:00:00')
+    }
+
     const account = await dataAdapter.updateAccount(userId, params.id, body)
     return NextResponse.json(account)
   } catch (error) {
