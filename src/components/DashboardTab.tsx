@@ -23,18 +23,6 @@ export default function DashboardTab() {
   const [loading, setLoading] = useState(false)
   const [dateRange, setDateRange] = useState(60) // days
 
-  // Fetch tracked accounts
-  useEffect(() => {
-    fetchAccounts()
-  }, [])
-
-  // Fetch projections when account or date range changes
-  useEffect(() => {
-    if (selectedAccountId) {
-      fetchProjections()
-    }
-  }, [selectedAccountId, dateRange])
-
   const fetchAccounts = async () => {
     try {
       const response = await fetch('/api/accounts?type=tracked')
@@ -77,6 +65,20 @@ export default function DashboardTab() {
       setLoading(false)
     }
   }
+
+  // Fetch tracked accounts
+  useEffect(() => {
+    fetchAccounts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fetch projections when account or date range changes
+  useEffect(() => {
+    if (selectedAccountId && selectedAccountId !== 'all') {
+      fetchProjections()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccountId, dateRange])
 
   // Find danger zones (balance <= 0)
   const dangerDates = projectionData
