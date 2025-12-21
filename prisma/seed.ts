@@ -22,145 +22,76 @@ async function main() {
   await prisma.transaction.deleteMany({ where: { userId: user.id } })
   await prisma.cashFlowAccount.deleteMany({ where: { userId: user.id } })
 
-  // Create tracked accounts
+  // Create single tracked account
   const checkingAccount = await prisma.cashFlowAccount.create({
     data: {
       userId: user.id,
       name: 'Main Checking',
       type: 'tracked',
-      initialBalance: 2500,
+      initialBalance: 3500,
     },
   })
 
-  const savingsAccount = await prisma.cashFlowAccount.create({
+  console.log('✅ Created tracked account: Main Checking')
+
+  // Create external accounts (simplified to just Income and Expenses)
+  const income = await prisma.cashFlowAccount.create({
     data: {
       userId: user.id,
-      name: 'Savings Account',
-      type: 'tracked',
-      initialBalance: 10000,
-    },
-  })
-
-  const creditCard = await prisma.cashFlowAccount.create({
-    data: {
-      userId: user.id,
-      name: 'Credit Card',
-      type: 'tracked',
-      initialBalance: -450, // Credit cards typically show as negative
-    },
-  })
-
-  console.log('✅ Created tracked accounts')
-
-  // Create external accounts (income/expense categories)
-  const salary = await prisma.cashFlowAccount.create({
-    data: {
-      userId: user.id,
-      name: 'Salary',
+      name: 'Income',
       type: 'external',
       category: 'income',
     },
   })
 
-  const groceries = await prisma.cashFlowAccount.create({
+  const expenses = await prisma.cashFlowAccount.create({
     data: {
       userId: user.id,
-      name: 'Groceries',
+      name: 'Expenses',
       type: 'external',
       category: 'expense',
     },
   })
 
-  const utilities = await prisma.cashFlowAccount.create({
-    data: {
-      userId: user.id,
-      name: 'Utilities',
-      type: 'external',
-      category: 'expense',
-    },
-  })
-
-  const rent = await prisma.cashFlowAccount.create({
-    data: {
-      userId: user.id,
-      name: 'Rent/Mortgage',
-      type: 'external',
-      category: 'expense',
-    },
-  })
-
-  const entertainment = await prisma.cashFlowAccount.create({
-    data: {
-      userId: user.id,
-      name: 'Entertainment',
-      type: 'external',
-      category: 'expense',
-    },
-  })
-
-  const dining = await prisma.cashFlowAccount.create({
-    data: {
-      userId: user.id,
-      name: 'Dining Out',
-      type: 'external',
-      category: 'expense',
-    },
-  })
-
-  const insurance = await prisma.cashFlowAccount.create({
-    data: {
-      userId: user.id,
-      name: 'Insurance',
-      type: 'external',
-      category: 'expense',
-    },
-  })
-
-  console.log('✅ Created external accounts')
+  console.log('✅ Created external accounts: Income, Expenses')
 
   // Helper function to get dates
   const today = new Date()
-  const daysAgo = (days: number) => {
-    const date = new Date(today)
-    date.setDate(date.getDate() - days)
-    return date
-  }
   const daysFromNow = (days: number) => {
     const date = new Date(today)
     date.setDate(date.getDate() + days)
     return date
   }
 
-  // Create recurring income (salary - biweekly)
+  // 1. Recurring income - Paycheck every 2 weeks
   await prisma.transaction.create({
     data: {
       userId: user.id,
-      fromAccountId: salary.id,
+      fromAccountId: income.id,
       toAccountId: checkingAccount.id,
       amount: 2800,
-      description: 'Biweekly Paycheck',
+      description: 'Paycheck',
       date: daysFromNow(7), // Next paycheck in 7 days
       recurrence: {
         create: {
-          frequency: 'biweekly',
-          interval: 1,
+          frequency: 'weekly',
+          interval: 2,
         },
       },
     },
   })
 
-  console.log('✅ Created recurring salary')
+  console.log('✅ Created recurring paycheck (every 2 weeks)')
 
-  // Create recurring expenses
-  // Rent - monthly on the 1st
+  // 2. Recurring expense - Rent on the 1st of each month
   await prisma.transaction.create({
     data: {
       userId: user.id,
       fromAccountId: checkingAccount.id,
-      toAccountId: rent.id,
-      amount: 1500,
-      description: 'Monthly Rent',
-      date: daysFromNow(1), // Assuming rent is due soon
+      toAccountId: expenses.id,
+      amount: 1800,
+      description: 'Rent',
+      date: daysFromNow(1),
       recurrence: {
         create: {
           frequency: 'monthly',
@@ -171,156 +102,34 @@ async function main() {
     },
   })
 
-  // Utilities - monthly on the 15th
+  console.log('✅ Created recurring rent (monthly on 1st)')
+
+  // 3. Recurring expense - Credit card payment on the 25th
+  // NOTE: This will eventually support variable amounts (future feature)
   await prisma.transaction.create({
     data: {
       userId: user.id,
       fromAccountId: checkingAccount.id,
-      toAccountId: utilities.id,
-      amount: 180,
-      description: 'Electric, Water, Internet',
-      date: daysFromNow(15),
-      recurrence: {
-        create: {
-          frequency: 'monthly',
-          interval: 1,
-          dayOfMonth: 15,
-        },
-      },
-    },
-  })
-
-  // Insurance - monthly on the 10th
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: insurance.id,
-      amount: 250,
-      description: 'Car & Health Insurance',
-      date: daysFromNow(10),
-      recurrence: {
-        create: {
-          frequency: 'monthly',
-          interval: 1,
-          dayOfMonth: 10,
-        },
-      },
-    },
-  })
-
-  console.log('✅ Created recurring expenses')
-
-  // Create some one-time past transactions
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: groceries.id,
-      amount: 85.50,
-      description: 'Whole Foods',
-      date: daysAgo(2),
-    },
-  })
-
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: dining.id,
-      amount: 42.30,
-      description: 'Dinner at Italian Restaurant',
-      date: daysAgo(4),
-    },
-  })
-
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: entertainment.id,
-      amount: 15.99,
-      description: 'Netflix Subscription',
-      date: daysAgo(7),
-    },
-  })
-
-  // Past salary
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: salary.id,
-      toAccountId: checkingAccount.id,
-      amount: 2800,
-      description: 'Biweekly Paycheck',
-      date: daysAgo(7),
-    },
-  })
-
-  console.log('✅ Created past transactions')
-
-  // Create some upcoming one-time transactions
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: groceries.id,
-      amount: 120,
-      description: 'Grocery Shopping (planned)',
-      date: daysFromNow(3),
-    },
-  })
-
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: entertainment.id,
-      amount: 65,
-      description: 'Concert Tickets',
-      date: daysFromNow(12),
-    },
-  })
-
-  // Credit card payment (transfer between tracked accounts)
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: creditCard.id,
+      toAccountId: expenses.id,
       amount: 450,
       description: 'Credit Card Payment',
       date: daysFromNow(5),
+      recurrence: {
+        create: {
+          frequency: 'monthly',
+          interval: 1,
+          dayOfMonth: 25,
+        },
+      },
     },
   })
 
-  // Savings transfer with settlement lag
-  await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      fromAccountId: checkingAccount.id,
-      toAccountId: savingsAccount.id,
-      amount: 500,
-      description: 'Monthly Savings Transfer',
-      date: daysFromNow(8),
-      settlementDays: 3, // Takes 3 days to settle
-    },
-  })
-
-  console.log('✅ Created upcoming transactions')
-
-  // Get transaction count
-  const transactionCount = await prisma.transaction.count({
-    where: { userId: user.id },
-  })
-
-  const accountCount = await prisma.cashFlowAccount.count({
-    where: { userId: user.id },
-  })
+  console.log('✅ Created recurring credit card payment (monthly on 25th)')
 
   console.log('\n🎉 Seeding complete!')
-  console.log(`📊 Created ${accountCount} accounts (3 tracked, ${accountCount - 3} external)`)
-  console.log(`💰 Created ${transactionCount} transactions (3 recurring, ${transactionCount - 3} one-time)`)
+  console.log('📊 Created 1 tracked account (Main Checking)')
+  console.log('📊 Created 2 external accounts (Income, Expenses)')
+  console.log('💰 Created 3 recurring transactions (Paycheck, Rent, Credit Card)')
   console.log('\n✨ You can now view the app with sample data at http://localhost:3000')
 }
 

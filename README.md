@@ -11,11 +11,14 @@ A personal finance application that helps you project future account balances ba
 
 ### Sample Data
 
-The app comes pre-loaded with realistic sample data including:
-- **3 tracked accounts**: Main Checking ($2,500), Savings ($10,000), Credit Card (-$450)
-- **7 expense/income categories**: Salary, Groceries, Utilities, Rent, Entertainment, Dining, Insurance
-- **12 transactions**: Including recurring salary (biweekly), recurring bills (monthly), and various one-time expenses
-- **Projections**: Shows upcoming 60 days with balance trends and danger zones
+The app comes pre-loaded with minimal sample data to demonstrate core features:
+- **1 tracked account**: Main Checking ($3,500)
+- **2 external accounts**: Income, Expenses
+- **3 recurring transactions**:
+  - Paycheck: $2,800 every 2 weeks
+  - Rent: $1,800 monthly on the 1st
+  - Credit Card Payment: $450 monthly on the 25th
+- **Projections**: Shows balance trends over time based on recurring transactions
 
 To reseed the database at any time, run:
 ```bash
