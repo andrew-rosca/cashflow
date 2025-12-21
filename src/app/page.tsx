@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { format, addDays, parseISO } from 'date-fns'
 import DateInput from '@/components/DateInput'
 import RecurrenceControl from '@/components/RecurrenceControl'
@@ -45,6 +45,7 @@ export default function Home() {
   // Inline editing state
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>('')
+  const dateValueRef = useRef<Record<string, string>>({})
   
   // Dialog states
   const [accountDialogOpen, setAccountDialogOpen] = useState(false)
@@ -146,12 +147,10 @@ export default function Home() {
   // Inline editing handlers
   const handleCellClick = (cellId: string, currentValue: string | Date) => {
     setEditingCell(cellId)
-    // If it's a date, convert to Date object for DateInput
+    // If it's a date, use the date string directly to avoid timezone issues
     if (cellId.includes('date')) {
-      const dateValue = typeof currentValue === 'string' 
-        ? new Date(currentValue + 'T00:00:00')
-        : currentValue
-      setEditValue(dateValue.toISOString().split('T')[0]) // Store as YYYY-MM-DD for compatibility
+      // Use getDateString to ensure we have YYYY-MM-DD format
+      setEditValue(getDateString(currentValue))
     } else {
       setEditValue(currentValue.toString())
     }
@@ -160,8 +159,18 @@ export default function Home() {
   // Handler for date changes from DateInput component
   const handleDateChange = (date: Date) => {
     if (!editingCell) return
-    const dateStr = format(date, 'yyyy-MM-dd')
+    // Extract UTC date components to avoid timezone shifts
+    const year = date.getUTCFullYear()
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(date.getUTCDate()).padStart(2, '0')
+    const dateStr = `${year}-${month}-${day}`
+    console.log('handleDateChange - date:', date.toISOString(), '-> formatted:', dateStr, 'UTC year:', year)
     setEditValue(dateStr)
+    // Store the date string in a ref so handleCellBlur can access it immediately
+    if (!dateValueRef.current) {
+      dateValueRef.current = {}
+    }
+    dateValueRef.current[editingCell] = dateStr
   }
 
   const handleCellBlur = async () => {
@@ -172,16 +181,28 @@ export default function Home() {
     try {
       if (parts[0] === 'account' && parts[1] === 'date') {
         const accountId = parts[2]
-        // Use date string directly (YYYY-MM-DD) to avoid timezone issues
-        // Create date at local midnight to avoid timezone shifts
-        const dateStr = editValue // Already in YYYY-MM-DD format from date input
-        const localDate = new Date(dateStr + 'T00:00:00')
-        await fetch(`/api/accounts/${accountId}`, {
+        // Use the date from the ref if available (from handleDateChange), otherwise use editValue
+        // This ensures we get the most recent value even if state hasn't updated yet
+        const dateStr = dateValueRef.current[editingCell] || editValue
+        console.log('[CLIENT] Saving date:', dateStr, 'for account:', accountId, 'from ref:', !!dateValueRef.current[editingCell])
+        // Clear the ref after using it
+        delete dateValueRef.current[editingCell]
+        const response = await fetch(`/api/accounts/${accountId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ balanceAsOf: localDate.toISOString() }),
+          body: JSON.stringify({ balanceAsOf: dateStr }),
         })
-        loadAccounts()
+        if (!response.ok) {
+          console.error('[CLIENT] Failed to save date:', response.status, response.statusText)
+          return
+        }
+        const updated = await response.json()
+        const returnedDateStr = typeof updated.balanceAsOf === 'string' 
+          ? updated.balanceAsOf.split('T')[0] 
+          : updated.balanceAsOf.toISOString().split('T')[0]
+        console.log('[CLIENT] Saved account date - returned:', updated.balanceAsOf, '-> extracted:', returnedDateStr, 'expected:', dateStr)
+        // Reload accounts to get the updated data
+        await loadAccounts()
       } else if (parts[0] === 'account' && parts[1] === 'balance') {
         const accountId = parts[2]
         await fetch(`/api/accounts/${accountId}`, {
@@ -425,16 +446,19 @@ export default function Home() {
   }
 
   const formatDate = (dateStr: string | Date) => {
-    // Parse date as local date to avoid timezone shifts
+    // Parse date as UTC to avoid timezone shifts
     let date: Date
     if (typeof dateStr === 'string') {
-      // If it's an ISO string, extract just the date part and parse as local
+      // If it's an ISO string, extract just the date part and parse as UTC
       const dateOnly = dateStr.split('T')[0]
-      date = new Date(dateOnly + 'T00:00:00')
+      const [year, month, day] = dateOnly.split('-').map(Number)
+      date = new Date(Date.UTC(year, month - 1, day))
     } else {
       date = dateStr
     }
-    return format(date, 'MMM d')
+    // Format using UTC components to avoid timezone shifts
+    const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getUTCMonth()]
+    return `${monthName} ${date.getUTCDate()}`
   }
   
   // Helper to get date string in YYYY-MM-DD format from a date
@@ -443,10 +467,10 @@ export default function Home() {
       // Extract date part from ISO string
       return date.split('T')[0]
     }
-    // Format as YYYY-MM-DD in local timezone
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
+    // Format as YYYY-MM-DD using UTC to avoid timezone shifts
+    const year = date.getUTCFullYear()
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(date.getUTCDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   }
 
@@ -508,12 +532,13 @@ export default function Home() {
 
     for (let i = 1; i < allDates.length; i++) {
       const currentDate = allDates[i]
-      const previousDate = allDates[i - 1]
+      // Compare with the last date that was actually included in datesWithChanges
+      const lastIncludedDate = datesWithChanges[datesWithChanges.length - 1]
       
       // Check if any account's balance changed between these dates
       const hasChange = accounts.some(account => {
         const currentBalance = getProjectedBalance(account.id, currentDate)
-        const previousBalance = getProjectedBalance(account.id, previousDate)
+        const previousBalance = getProjectedBalance(account.id, lastIncludedDate)
         
         // If either is null, we can't compare, so include the date
         if (currentBalance === null || previousBalance === null) {
@@ -564,14 +589,20 @@ export default function Home() {
               </div>
               <div className="space-y-1">
                 {accounts.map(account => {
-                  // Parse balanceAsOf as local date to avoid timezone issues
+                  // Parse balanceAsOf as UTC date to avoid timezone issues
                   const balanceAsOf = account.balanceAsOf 
                     ? (() => {
+                        let dateOnly: string
                         if (typeof account.balanceAsOf === 'string') {
-                          const dateOnly = account.balanceAsOf.split('T')[0]
-                          return new Date(dateOnly + 'T00:00:00')
+                          dateOnly = account.balanceAsOf.split('T')[0]
+                        } else {
+                          dateOnly = account.balanceAsOf.toISOString().split('T')[0]
                         }
-                        return account.balanceAsOf
+                        // Parse as UTC to avoid timezone conversion issues
+                        const [year, month, day] = dateOnly.split('-').map(Number)
+                        const parsed = new Date(Date.UTC(year, month - 1, day))
+                        console.log('Account date from API:', account.balanceAsOf, '-> extracted:', dateOnly, '-> parsed year (UTC):', parsed.getUTCFullYear())
+                        return parsed
                       })()
                     : new Date()
                   return (
@@ -587,7 +618,7 @@ export default function Home() {
                       </span>
                       {editingCell === `account-date-${account.id}` ? (
                         <DateInput
-                          value={editValue ? new Date(editValue + 'T00:00:00') : balanceAsOf}
+                          value={editValue ? editValue : getDateString(balanceAsOf)}
                           onChange={handleDateChange}
                           onBlur={handleCellBlur}
                           className="w-40 flex-shrink-0"

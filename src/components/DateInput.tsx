@@ -35,12 +35,26 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
 
   // Parse initial value
   useEffect(() => {
-    const date = typeof value === 'string' ? new Date(value) : value
+    let date: Date
+    if (typeof value === 'string') {
+      // If it's a string, extract date part and parse as UTC date to avoid timezone shifts
+      const dateOnly = value.split('T')[0] // Get YYYY-MM-DD part
+      const [year, month, day] = dateOnly.split('-').map(Number)
+      date = new Date(Date.UTC(year, month - 1, day)) // Create at UTC midnight
+    } else {
+      // If it's a Date object, extract date components from UTC to avoid timezone shifts
+      // Use UTC methods to get the date components that were originally stored
+      const year = value.getUTCFullYear()
+      const month = value.getUTCMonth()
+      const day = value.getUTCDate()
+      date = new Date(Date.UTC(year, month, day))
+    }
     if (isValid(date)) {
-      const monthName = MONTHS[date.getMonth()]
-      setDay(String(date.getDate()).padStart(2, '0'))
+      // Use UTC methods to extract date components for display
+      const monthName = MONTHS[date.getUTCMonth()]
+      setDay(String(date.getUTCDate()).padStart(2, '0'))
       setMonth(monthName)
-      setYear(String(date.getFullYear()))
+      setYear(String(date.getUTCFullYear()))
       setMonthInput(monthName)
       setPrevMonthInputLength(monthName.length)
     }
@@ -251,10 +265,11 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
       if (monthIndex !== -1) {
         const dayNum = parseInt(day)
         const yearNum = parseInt(year)
-        const daysInMonth = getDaysInMonth(new Date(yearNum, monthIndex))
+        // Use UTC to create date to avoid timezone shifts
+        const daysInMonth = getDaysInMonth(new Date(Date.UTC(yearNum, monthIndex, 1)))
         const validDay = Math.min(dayNum, daysInMonth)
         
-        const newDate = new Date(yearNum, monthIndex, validDay)
+        const newDate = new Date(Date.UTC(yearNum, monthIndex, validDay))
         if (isValid(newDate)) {
           onChange(newDate)
         }

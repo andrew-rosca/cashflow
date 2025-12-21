@@ -8,6 +8,13 @@ export async function GET(request: NextRequest) {
   try {
     const userId = getCurrentUserId()
     const accounts = await dataAdapter.getAccounts(userId)
+    // Log dates to debug
+    accounts.forEach(acc => {
+      if (acc.balanceAsOf) {
+        const dateStr = typeof acc.balanceAsOf === 'string' ? acc.balanceAsOf : acc.balanceAsOf.toISOString()
+        console.log('[API GET] Account', acc.name, 'balanceAsOf:', dateStr, 'year from string:', dateStr.split('T')[0].split('-')[0])
+      }
+    })
     return NextResponse.json(accounts)
   } catch (error) {
     console.error('Error fetching accounts:', error)
@@ -20,12 +27,13 @@ export async function POST(request: NextRequest) {
     const userId = getCurrentUserId()
     const body = await request.json()
 
-    // Parse balanceAsOf as local date to avoid timezone shifts
+    // Parse balanceAsOf as UTC date to avoid timezone shifts
     if (body.balanceAsOf) {
       const dateStr = typeof body.balanceAsOf === 'string' ? body.balanceAsOf : body.balanceAsOf.toISOString()
-      // Extract date part and create at local midnight
+      // Extract date part and create at UTC midnight to avoid timezone conversion issues
       const dateOnly = dateStr.split('T')[0]
-      body.balanceAsOf = new Date(dateOnly + 'T00:00:00')
+      const [year, month, day] = dateOnly.split('-').map(Number)
+      body.balanceAsOf = new Date(Date.UTC(year, month - 1, day))
     }
 
     const account = await dataAdapter.createAccount(userId, body)

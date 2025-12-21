@@ -30,15 +30,23 @@ export async function PUT(
     const userId = getCurrentUserId()
     const body = await request.json()
 
-    // Parse balanceAsOf as local date to avoid timezone shifts
+    // Parse balanceAsOf as UTC date to avoid timezone shifts
     if (body.balanceAsOf) {
       const dateStr = typeof body.balanceAsOf === 'string' ? body.balanceAsOf : body.balanceAsOf.toISOString()
-      // Extract date part and create at local midnight
+      // Extract date part and create at UTC midnight to avoid timezone shifts
       const dateOnly = dateStr.split('T')[0]
-      body.balanceAsOf = new Date(dateOnly + 'T00:00:00')
+      const [year, month, day] = dateOnly.split('-').map(Number)
+      // Create date using UTC to avoid timezone conversion issues
+      const parsedDate = new Date(Date.UTC(year, month - 1, day))
+      console.log('[API PUT] Received date:', body.balanceAsOf, '-> extracted:', dateOnly, '-> year/month/day:', year, month, day, '-> parsed year:', parsedDate.getUTCFullYear(), 'UTC date:', parsedDate.toISOString(), 'timestamp:', parsedDate.getTime())
+      body.balanceAsOf = parsedDate
     }
 
     const account = await dataAdapter.updateAccount(userId, params.id, body)
+    const returnedDate = account.balanceAsOf
+    const returnedISO = typeof returnedDate === 'string' ? returnedDate : returnedDate.toISOString()
+    const returnedYear = typeof returnedDate === 'string' ? returnedDate.split('T')[0].split('-')[0] : returnedDate.getUTCFullYear()
+    console.log('[API PUT] Account after update - balanceAsOf:', returnedISO, 'type:', typeof returnedDate, 'year:', returnedYear, 'timestamp:', typeof returnedDate === 'object' ? returnedDate.getTime() : 'N/A')
     return NextResponse.json(account)
   } catch (error) {
     console.error('Error updating account:', error)
