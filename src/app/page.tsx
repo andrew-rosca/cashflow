@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { format, addDays, parseISO } from 'date-fns'
+import DateInput from '@/components/DateInput'
 
 interface Account {
   id: string
@@ -50,6 +51,8 @@ export default function Home() {
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [isRecurringTransaction, setIsRecurringTransaction] = useState(false)
+  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null)
 
   // Load data
   useEffect(() => {
@@ -66,6 +69,10 @@ export default function Home() {
   const loadAccounts = async () => {
     try {
       const response = await fetch('/api/accounts')
+      if (!response.ok) {
+        console.error('Failed to load accounts:', response.status, response.statusText)
+        return
+      }
       const data = await response.json()
       // Filter out income/expense accounts - these are not tracked accounts
       // They're used for categorization but shouldn't appear in the balance list
@@ -86,6 +93,10 @@ export default function Home() {
       const response = await fetch(
         `/api/transactions?startDate=${format(today, 'yyyy-MM-dd')}&endDate=${format(futureDate, 'yyyy-MM-dd')}`
       )
+      if (!response.ok) {
+        console.error('Failed to load transactions:', response.status, response.statusText)
+        return
+      }
       const data = await response.json()
       setTransactions(data)
     } catch (error) {
@@ -109,6 +120,10 @@ export default function Home() {
         const response = await fetch(
           `/api/projections?accountId=${account.id}&startDate=${format(today, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
         )
+        if (!response.ok) {
+          console.error(`Failed to load projections for account ${account.id}:`, response.status, response.statusText)
+          continue
+        }
         const data = await response.json()
         allProjections.push(...data)
       }
@@ -120,9 +135,24 @@ export default function Home() {
   }
 
   // Inline editing handlers
-  const handleCellClick = (cellId: string, currentValue: string) => {
+  const handleCellClick = (cellId: string, currentValue: string | Date) => {
     setEditingCell(cellId)
-    setEditValue(currentValue)
+    // If it's a date, convert to Date object for DateInput
+    if (cellId.includes('date')) {
+      const dateValue = typeof currentValue === 'string' 
+        ? new Date(currentValue + 'T00:00:00')
+        : currentValue
+      setEditValue(dateValue.toISOString().split('T')[0]) // Store as YYYY-MM-DD for compatibility
+    } else {
+      setEditValue(currentValue.toString())
+    }
+  }
+
+  // Handler for date changes from DateInput component
+  const handleDateChange = (date: Date) => {
+    if (!editingCell) return
+    const dateStr = format(date, 'yyyy-MM-dd')
+    setEditValue(dateStr)
   }
 
   const handleCellBlur = async () => {
@@ -153,9 +183,8 @@ export default function Home() {
         loadAccounts()
       } else if (parts[0] === 'tx' && parts[1] === 'date') {
         const txId = parts[2]
-        // Use date string directly (YYYY-MM-DD) to avoid timezone issues
-        // Create date at local midnight to avoid timezone shifts
-        const dateStr = editValue // Already in YYYY-MM-DD format from date input
+        // editValue is stored as YYYY-MM-DD, convert to Date
+        const dateStr = editValue // YYYY-MM-DD format
         const localDate = new Date(dateStr + 'T00:00:00')
         await fetch(`/api/transactions/${txId}`, {
           method: 'PUT',
@@ -214,19 +243,19 @@ export default function Home() {
   }
 
   const handleAccountNameChange = async (newName: string) => {
-    if (selectedAccountId) {
+    if (selectedAccountId && newName.trim()) {
       try {
         await fetch(`/api/accounts/${selectedAccountId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: newName }),
+          body: JSON.stringify({ name: newName.trim() }),
         })
         loadAccounts()
+        closeAccountDialog()
       } catch (error) {
         console.error('Failed to update account name:', error)
       }
     }
-    closeAccountDialog()
   }
 
   const handleAccountDelete = async () => {
@@ -243,7 +272,7 @@ export default function Home() {
 
   const handleAddAccount = async () => {
     try {
-      await fetch('/api/accounts', {
+      const response = await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -252,9 +281,14 @@ export default function Home() {
           balanceAsOf: new Date().toISOString().split('T')[0] + 'T00:00:00',
         }),
       })
-      loadAccounts()
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to create account' }))
+        throw new Error(error.message || 'Failed to create account')
+      }
+      await loadAccounts()
     } catch (error) {
       console.error('Failed to create account:', error)
+      alert('Failed to create account. Please try again.')
     }
   }
 
@@ -277,21 +311,20 @@ export default function Home() {
     setTransactionDialogOpen(false)
     setSelectedTransactionId(null)
     setIsRecurringTransaction(false)
+    setTransactionDate(new Date())
+    setRecurrenceEndDate(null)
   }
 
   const handleTransactionSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     
-    // Parse dates as local dates to avoid timezone issues
-    const dateStr = formData.get('date') as string
-    const localDate = new Date(dateStr + 'T00:00:00')
-    
+    // Use transactionDate state (already a Date object)
     const payload: any = {
       fromAccountId: formData.get('fromAccountId') as string,
       toAccountId: formData.get('toAccountId') as string,
       amount: parseFloat(formData.get('amount') as string),
-      date: localDate.toISOString(),
+      date: transactionDate.toISOString(),
       description: (formData.get('description') as string) || undefined,
     }
 
@@ -299,10 +332,8 @@ export default function Home() {
       payload.recurrence = {
         frequency: formData.get('frequency') as string,
       }
-      if (formData.get('endDate')) {
-        const endDateStr = formData.get('endDate') as string
-        const localEndDate = new Date(endDateStr + 'T00:00:00')
-        payload.recurrence.endDate = localEndDate.toISOString()
+      if (recurrenceEndDate) {
+        payload.recurrence.endDate = recurrenceEndDate.toISOString()
       }
       if (formData.get('dayOfWeek')) {
         payload.recurrence.dayOfWeek = parseInt(formData.get('dayOfWeek') as string)
@@ -491,27 +522,25 @@ export default function Home() {
                   return (
                     <div
                       key={account.id}
-                      className="flex items-center gap-2 py-1 px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors"
+                      className="flex items-center gap-2 py-1 px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors min-w-0"
                     >
                       <span 
-                        className="text-xs text-gray-400 dark:text-gray-500 min-w-[80px] cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
+                        className="text-xs text-gray-400 dark:text-gray-500 min-w-[80px] flex-shrink-0 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
                         onClick={() => openAccountDialog(account.id)}
                       >
                         {account.name}
                       </span>
                       {editingCell === `account-date-${account.id}` ? (
-                        <input
-                          type="date"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
+                        <DateInput
+                          value={editValue ? new Date(editValue + 'T00:00:00') : balanceAsOf}
+                          onChange={handleDateChange}
                           onBlur={handleCellBlur}
-                          onKeyDown={handleKeyPress}
+                          className="w-40 flex-shrink-0"
                           autoFocus
-                          className="text-xs text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 w-20"
                         />
                       ) : (
                         <span 
-                          className="text-xs text-gray-500 dark:text-gray-400 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded"
+                          className="text-xs text-gray-500 dark:text-gray-400 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-shrink-0 whitespace-nowrap"
                           onClick={() => handleCellClick(`account-date-${account.id}`, getDateString(balanceAsOf))}
                         >
                           {formatDate(balanceAsOf)}
@@ -602,14 +631,12 @@ export default function Home() {
                     ) : (
                       <>
                         {editingCell === `tx-date-${tx.id}` ? (
-                          <input
-                            type="date"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
+                          <DateInput
+                            value={editValue ? new Date(editValue + 'T00:00:00') : tx.date}
+                            onChange={handleDateChange}
                             onBlur={handleCellBlur}
-                            onKeyDown={handleKeyPress}
+                            className="w-40 flex-shrink-0"
                             autoFocus
-                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 w-20"
                           />
                         ) : (
                           <span 
@@ -689,7 +716,7 @@ export default function Home() {
                     <tr
                       key={date.toISOString()}
                       className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-                        idx % 5 === 0 ? 'bg-gray-25 dark:bg-gray-900/50' : ''
+                        idx % 5 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''
                       }`}
                     >
                       <td className="py-2 px-4 text-gray-600 dark:text-gray-400 font-medium">
@@ -733,38 +760,54 @@ export default function Home() {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                 Edit Account
               </h3>
-              <div className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const formData = new FormData(e.currentTarget)
+                  const name = formData.get('name') as string
+                  handleAccountNameChange(name)
+                }}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Account Name
                   </label>
                   <input
                     type="text"
+                    name="name"
                     defaultValue={accounts.find(a => a.id === selectedAccountId)?.name}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAccountNameChange(e.currentTarget.value)
-                      }
-                    }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     autoFocus
+                    required
                   />
                 </div>
-                <div className="flex gap-2 pt-4">
+                <div className="flex gap-2 pt-4 items-center">
                   <button
+                    type="button"
                     onClick={closeAccountDialog}
                     className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={handleAccountDelete}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
-                    Delete
+                    Update
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAccountDelete}
+                    className="px-3 py-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    title="Delete account"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
         )}
@@ -823,12 +866,10 @@ export default function Home() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Date
                   </label>
-                  <input
-                    type="date"
-                    name="date"
-                    required
-                    defaultValue={selectedTransaction ? getDateString(selectedTransaction.date) : ''}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  <DateInput
+                    value={transactionDate}
+                    onChange={setTransactionDate}
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -920,12 +961,30 @@ export default function Home() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         End Date (optional)
                       </label>
-                      <input
-                        type="date"
-                        name="endDate"
-                        defaultValue={selectedTransaction?.recurrence?.endDate ? getDateString(selectedTransaction.recurrence.endDate) : ''}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
+                      {recurrenceEndDate ? (
+                        <>
+                          <DateInput
+                            value={recurrenceEndDate}
+                            onChange={(date) => setRecurrenceEndDate(date)}
+                            className="w-full"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setRecurrenceEndDate(null)}
+                            className="mt-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                          >
+                            Clear end date
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setRecurrenceEndDate(new Date())}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm"
+                        >
+                          Set end date
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
