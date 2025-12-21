@@ -75,6 +75,16 @@ npm run db:seed
 4. Update `docs/implementation-progress.txt` with progress and decisions
 5. Commit completed features with clear messages
 
+## Testing
+
+Run tests with:
+```bash
+npm test          # Run all tests
+npm test:watch    # Run tests in watch mode
+```
+
+**Important:** Tests use an in-memory SQLite database (`file::memory:?cache=shared`) to ensure complete isolation from development data. Test data is ephemeral and never persists to disk, preventing pollution of your seeded sample data or manual test data.
+
 ## Features
 
 See `docs/feature_list.json` for the complete feature list and implementation status.
