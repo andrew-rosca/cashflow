@@ -30,6 +30,11 @@ export async function PUT(
     const userId = getCurrentUserId()
     const body = await request.json()
 
+    // Ensure amount is a number (not a string) and preserve sign
+    if (body.amount !== undefined) {
+      body.amount = typeof body.amount === 'string' ? parseFloat(body.amount) : Number(body.amount)
+    }
+
     // Parse date as local date to avoid timezone shifts
     if (body.date) {
       const dateStr = typeof body.date === 'string' ? body.date : body.date.toISOString()
