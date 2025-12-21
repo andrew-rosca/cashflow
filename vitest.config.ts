@@ -5,9 +5,11 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'node',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    // Support both node (for API tests) and jsdom (for UI tests)
+    // Default to node for existing tests, use jsdom for component tests
+    environment: 'node',
   },
   resolve: {
     alias: {
