@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { today } from '@/lib/logical-date'
 
 /**
  * Test Data Helpers
@@ -32,7 +33,7 @@ export async function createTestAccount(
   options: {
     name?: string
     initialBalance?: number
-    balanceAsOf?: Date
+    balanceAsOf?: string
   } = {}
 ) {
   const user = await getTestUser(prisma)
@@ -42,7 +43,7 @@ export async function createTestAccount(
       userId: user.id,
       name: options.name || 'Test Checking',
       initialBalance: options.initialBalance ?? 1000,
-      balanceAsOf: options.balanceAsOf || new Date(),
+      balanceAsOf: options.balanceAsOf || today().toString(),
     },
   })
 }
@@ -64,7 +65,7 @@ export async function createTestExternalAccount(
       userId: user.id,
       name: options.name || 'Test Expense',
       initialBalance: 0,
-      balanceAsOf: new Date(),
+      balanceAsOf: today().toString(),
     },
   })
 }
@@ -78,7 +79,7 @@ export async function createTestTransaction(
     fromAccountId: string
     toAccountId: string
     amount?: number
-    date?: Date
+    date?: string
     description?: string
     settlementDays?: number
   }
@@ -91,7 +92,7 @@ export async function createTestTransaction(
       fromAccountId: options.fromAccountId,
       toAccountId: options.toAccountId,
       amount: options.amount ?? 100,
-      date: options.date || new Date(),
+      date: options.date || today().toString(),
       description: options.description,
       settlementDays: options.settlementDays,
     },
@@ -107,13 +108,13 @@ export async function createTestRecurringTransaction(
     fromAccountId: string
     toAccountId: string
     amount?: number
-    date?: Date
+    date?: string
     description?: string
     frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
     dayOfWeek?: number
     dayOfMonth?: number
     interval?: number
-    endDate?: Date
+    endDate?: string
     occurrences?: number
   }
 ) {
@@ -125,7 +126,7 @@ export async function createTestRecurringTransaction(
       fromAccountId: options.fromAccountId,
       toAccountId: options.toAccountId,
       amount: options.amount ?? 100,
-      date: options.date || new Date(),
+      date: options.date || today().toString(),
       description: options.description,
     },
   })

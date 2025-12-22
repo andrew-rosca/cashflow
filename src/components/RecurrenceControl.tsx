@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import DateInput from './DateInput'
+import { LogicalDate, today } from '@/lib/logical-date'
 
 interface RecurrenceControlProps {
   value: {
@@ -47,7 +48,7 @@ export default function RecurrenceControl({ value, onChange }: RecurrenceControl
     return Array.isArray(value.month) ? value.month : [value.month]
   })
   const [endDate, setEndDate] = useState<string | null>(
-    value.endDate ? (typeof value.endDate === 'string' ? value.endDate : value.endDate.toISOString().split('T')[0]) : null
+    value.endDate ? (typeof value.endDate === 'string' ? value.endDate : LogicalDate.fromString(value.endDate).toString()) : null
   )
 
   // Track if we're updating from internal changes to avoid loops
@@ -102,7 +103,7 @@ export default function RecurrenceControl({ value, onChange }: RecurrenceControl
     const propMonth = value.month
       ? (Array.isArray(value.month) ? value.month : [value.month])
       : []
-    const propEndDate = value.endDate ? (typeof value.endDate === 'string' ? value.endDate : value.endDate.toISOString().split('T')[0]) : null
+    const propEndDate = value.endDate ? (typeof value.endDate === 'string' ? value.endDate : LogicalDate.fromString(value.endDate).toString()) : null
 
     // Compare arrays
     const arraysEqual = (a: any[], b: any[]) => {
@@ -320,7 +321,7 @@ export default function RecurrenceControl({ value, onChange }: RecurrenceControl
           <>
             <DateInput
               value={endDate}
-              onChange={(date) => setEndDate(date.toISOString().split('T')[0])}
+              onChange={(date) => setEndDate(date.toString())}
               className="w-full"
             />
             <button
@@ -335,8 +336,7 @@ export default function RecurrenceControl({ value, onChange }: RecurrenceControl
           <button
             type="button"
             onClick={() => {
-              const today = new Date()
-              setEndDate(today.toISOString().split('T')[0])
+              setEndDate(today().toString())
             }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm"
           >

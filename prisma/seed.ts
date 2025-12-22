@@ -1,9 +1,17 @@
 import { PrismaClient } from '@prisma/client'
+import { today } from '../src/lib/logical-date'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Seeding database with sample data...')
+  // Check if we should seed only the user (no accounts/transactions)
+  const seedUserOnly = process.argv.includes('--user-only') || process.env.SEED_USER_ONLY === 'true'
+
+  if (seedUserOnly) {
+    console.log('🌱 Seeding database with user only...')
+  } else {
+    console.log('🌱 Seeding database with sample data...')
+  }
 
   // Create sample user
   const user = await prisma.user.upsert({
@@ -18,20 +26,28 @@ async function main() {
 
   console.log('✅ Created user:', user.email)
 
+  // If user-only mode, exit early
+  if (seedUserOnly) {
+    console.log('\n🎉 User seeding complete!')
+    console.log('✨ User created: demo@cashflow.app')
+    return
+  }
+
   // Clear existing data for this user
   await prisma.transaction.deleteMany({ where: { userId: user.id } })
   await prisma.cashFlowAccount.deleteMany({ where: { userId: user.id } })
 
-  // Get today's date
-  const today = new Date()
+  // Get today's date as LogicalDate and convert to string
+  const todayDate = today()
+  const todayString = todayDate.toString()
 
-  // Create accounts with balanceAsOf set to today
+  // Create accounts with balanceAsOf set to today (as string YYYY-MM-DD)
   const checkingAccount = await prisma.cashFlowAccount.create({
     data: {
       userId: user.id,
       name: 'Main Checking',
       initialBalance: 3500,
-      balanceAsOf: today,
+      balanceAsOf: todayString,
     },
   })
 
@@ -40,7 +56,7 @@ async function main() {
       userId: user.id,
       name: 'Income',
       initialBalance: 0,
-      balanceAsOf: today,
+      balanceAsOf: todayString,
     },
   })
 
@@ -49,17 +65,15 @@ async function main() {
       userId: user.id,
       name: 'Expenses',
       initialBalance: 0,
-      balanceAsOf: today,
+      balanceAsOf: todayString,
     },
   })
 
   console.log('✅ Created accounts: Main Checking, Income, Expenses')
 
-  // Helper function to get dates
+  // Helper function to get dates (returns string YYYY-MM-DD)
   const daysFromNow = (days: number) => {
-    const date = new Date(today)
-    date.setDate(date.getDate() + days)
-    return date
+    return todayDate.addDays(days).toString()
   }
 
   // 1. Recurring income - Paycheck every 2 weeks

@@ -17,7 +17,7 @@ describe('Transaction Amount Input', () => {
         return Promise.resolve({
           ok: true,
           json: async () => [
-            { id: 'acc1', name: 'Test Account', initialBalance: 1000, balanceAsOf: new Date().toISOString() }
+            { id: 'acc1', name: 'Test Account', initialBalance: 1000, balanceAsOf: '2025-01-15' }
           ]
         })
       }
@@ -29,7 +29,7 @@ describe('Transaction Amount Input', () => {
             fromAccountId: 'acc1',
             toAccountId: 'acc1',
             amount: -100, // This should be negative if user entered -100
-            date: new Date().toISOString(),
+            date: '2025-01-15',
             description: 'Test transaction'
           })
         })

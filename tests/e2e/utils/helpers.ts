@@ -80,12 +80,13 @@ export async function isVisible(page: Page, selector: string): Promise<boolean> 
 
 /**
  * Format date for input fields (YYYY-MM-DD)
+ * Accepts LogicalDate or string (YYYY-MM-DD format)
  */
-export function formatDateForInput(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+export function formatDateForInput(date: string | { toString(): string }): string {
+  if (typeof date === 'string') {
+    return date
+  }
+  return date.toString()
 }
 
 /**

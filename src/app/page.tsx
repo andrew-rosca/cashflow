@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import DateInput from '@/components/DateInput'
 import RecurrenceControl from '@/components/RecurrenceControl'
-import { LogicalDate } from '@/lib/logical-date'
+import { LogicalDate, today } from '@/lib/logical-date'
 
 interface Account {
   id: string
@@ -49,8 +49,7 @@ export default function Home() {
   
   // Helper to get today's date (client-side only - uses browser's local date)
   const getToday = (): LogicalDate => {
-    const now = new Date()
-    return LogicalDate.from(now.getFullYear(), now.getMonth() + 1, now.getDate())
+    return today() // Use the today() function from LogicalDate (the only place Date is used)
   }
 
   // Dialog states
@@ -202,9 +201,10 @@ export default function Home() {
           return
         }
         const updated = await response.json()
+        // balanceAsOf should always be a string (YYYY-MM-DD) from the API
         const returnedDateStr = typeof updated.balanceAsOf === 'string' 
           ? updated.balanceAsOf.split('T')[0] 
-          : updated.balanceAsOf.toISOString().split('T')[0]
+          : updated.balanceAsOf.toString()
         console.log('[CLIENT] Saved account date - returned:', updated.balanceAsOf, '-> extracted:', returnedDateStr, 'expected:', dateStr)
         // Reload accounts to get the updated data
         await loadAccounts()
