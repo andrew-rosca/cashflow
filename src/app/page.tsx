@@ -259,42 +259,17 @@ export default function Home() {
         }
       } else if (parts[0] === 'tx' && parts[1] === 'amount') {
         const txId = parts[2]
-        const tx = transactions.find(t => t.id === txId)
-        if (tx) {
-          // Get the form amount (which is the displayed amount from getTransactionAmount)
-          const formAmount = parseFloat(editValue) || 0
-          
-          // Reverse the getTransactionAmount transformation for storage
-          const fromAccount = accounts.find(a => a.id === tx.fromAccountId)
-          let storageAmount = formAmount
-          
-          if (fromAccount) {
-            // Editing existing transaction - need to reverse the display transformation
-            // getTransactionAmount: if stored amount is positive, display as negative
-            //                      if stored amount is negative, display as negative (preserved)
-            // So if original stored was positive and we're showing negative, reverse it
-            if (tx.amount > 0 && formAmount < 0) {
-              // Original was positive, displayed as negative, reverse to positive for storage
-              storageAmount = Math.abs(formAmount)
-            } else if (tx.amount < 0 && formAmount < 0) {
-              // Original was negative, displayed as negative, preserve negative
-              storageAmount = formAmount
-            } else if (formAmount > 0) {
-              // User changed to positive - this is unusual for fromAccount, but store as user entered
-              storageAmount = formAmount
-            }
-          }
-          
-          await fetch(`/api/transactions/${txId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: storageAmount }),
-          })
-          await loadTransactions()
-          // Reload projections after transaction amount is updated
-          if (accounts.length > 0) {
-            await loadProjections()
-          }
+        // Store exactly what the user entered - no transformation needed
+        const amount = parseFloat(editValue) || 0
+        await fetch(`/api/transactions/${txId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount }),
+        })
+        await loadTransactions()
+        // Reload projections after transaction amount is updated
+        if (accounts.length > 0) {
+          await loadProjections()
         }
       } else if (parts[0] === 'tx' && parts[1] === 'notes') {
         const txId = parts[2]
@@ -486,36 +461,17 @@ export default function Home() {
     }
     
     // Use transactionDate state - convert to calendar date string (YYYY-MM-DD)
-    // Get the form amount (which is the displayed amount from getTransactionAmount)
+    // Get the form amount - for new transactions, this is what the user entered
+    // For editing, this is the displayed amount (which may have been transformed by getTransactionAmount)
     let formAmount = parseFloat(formData.get('amount') as string)
     
-    // Reverse the getTransactionAmount transformation for storage
-    // getTransactionAmount logic: if from tracked account and amount is positive, negate it for display
-    // So if displayed is -49.01 and original stored was 49.01, we need to reverse it
-    const fromAccount = accounts.find(a => a.id === transactionAccountId)
-    let storageAmount = formAmount
-    
-    if (fromAccount && selectedTransactionId && selectedTransaction) {
-      // Editing existing transaction - need to reverse the display transformation
-      // getTransactionAmount: if stored amount is positive, display as negative
-      //                      if stored amount is negative, display as negative (preserved)
-      // So if original stored was positive and we're showing negative, reverse it
-      if (selectedTransaction.amount > 0 && formAmount < 0) {
-        // Original was positive, displayed as negative, reverse to positive for storage
-        storageAmount = Math.abs(formAmount)
-      } else if (selectedTransaction.amount < 0 && formAmount < 0) {
-        // Original was negative, displayed as negative, preserve negative
-        storageAmount = formAmount
-      } else if (formAmount > 0) {
-        // User changed to positive - this is unusual for fromAccount, but store as user entered
-        storageAmount = formAmount
-      }
-    } else if (fromAccount && !selectedTransactionId) {
-      // New transaction from tracked account
-      // If user enters negative, store negative; if positive, store positive
-      // getTransactionAmount will handle the display transformation
-      storageAmount = formAmount
+    if (isNaN(formAmount)) {
+      formAmount = 0
     }
+    
+    // Store exactly what the user entered - no transformation needed
+    // The amount is displayed as stored, so we just use the form value directly
+    const storageAmount = formAmount
     
     const payload: any = {
       fromAccountId: transactionAccountId,
@@ -586,28 +542,10 @@ export default function Home() {
   }
 
   // Calculate transaction amount for display
-  // For simplicity, show amount as positive (inflow) or negative (outflow) based on direction
+  // Display the amount exactly as stored - preserve user's intent
   const getTransactionAmount = (tx: Transaction): number => {
-    // If transaction is from a tracked account, it's an outflow (negative)
-    const fromAccount = accounts.find(a => a.id === tx.fromAccountId)
-    const toAccount = accounts.find(a => a.id === tx.toAccountId)
-    
-    // If both are tracked accounts and they're different, it's a transfer - show as negative from source
-    if (fromAccount && toAccount && tx.fromAccountId !== tx.toAccountId) {
-      return -tx.amount
-    }
-    // If from tracked account (and not a transfer), it's an outflow (negative)
-    // But preserve the sign if amount is already negative (user entered negative expense)
-    if (fromAccount) {
-      // If amount is already negative, it's an expense - preserve the sign
-      // If amount is positive, negate it to show as outflow
-      return tx.amount < 0 ? tx.amount : -tx.amount
-    }
-    // If to tracked account, it's an inflow (positive)
-    if (toAccount) {
-      return tx.amount
-    }
-    // Default: preserve the sign of the amount (user's intent)
+    // Display the amount as stored - no transformation
+    // The sign reflects the user's intent when they entered the transaction
     return tx.amount
   }
 
