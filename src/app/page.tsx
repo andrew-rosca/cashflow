@@ -876,20 +876,44 @@ export default function Home() {
                         >
                           {formatDate(tx.date)}
                         </span>
-                        <span 
-                          className="text-sm text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate"
-                          onClick={() => openTransactionDialog(tx.id)}
-                        >
-                          {tx.description || 'Transaction'}
-                        </span>
-                        <span 
-                          className={`text-sm font-mono cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded ${
-                            getTransactionAmount(tx) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
-                          }`}
-                          onClick={() => openTransactionDialog(tx.id)}
-                        >
-                          {formatNumber(getTransactionAmount(tx))}
-                        </span>
+                        {editingCell === `tx-notes-${tx.id}` ? (
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleCellBlur}
+                            onKeyDown={handleKeyPress}
+                            autoFocus
+                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1"
+                          />
+                        ) : (
+                          <span 
+                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate"
+                            onClick={() => handleCellClick(`tx-notes-${tx.id}`, tx.description || '')}
+                          >
+                            {tx.description || 'Transaction'}
+                          </span>
+                        )}
+                        {editingCell === `tx-amount-${tx.id}` ? (
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleCellBlur}
+                            onKeyDown={handleKeyPress}
+                            autoFocus
+                            className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 text-right w-20"
+                          />
+                        ) : (
+                          <span 
+                            className={`text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded ${
+                              getTransactionAmount(tx) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
+                            }`}
+                            onClick={() => handleCellClick(`tx-amount-${tx.id}`, getTransactionAmount(tx).toString())}
+                          >
+                            {formatNumber(getTransactionAmount(tx))}
+                          </span>
+                        )}
                       </>
                     ) : (
                       <>
