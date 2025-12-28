@@ -109,6 +109,46 @@ For detailed project requirements, see `docs/specification.md`.
 - `GET /api/transactions/:id` - Get transaction
 - `PUT /api/transactions/:id` - Update transaction
 - `DELETE /api/transactions/:id` - Delete transaction
+- `GET /api/transactions/bulk` - Export all transactions as TSV
+- `POST /api/transactions/bulk` - Import transactions from TSV
+
+#### Bulk Transactions Format
+
+The bulk transactions API uses Tab-Separated Values (TSV) format for backup and restore operations.
+
+**TSV Format:**
+```
+ID	Type	Account ID	Amount	Date	Description	Frequency	Interval	Day of Week	Day of Month	End Date	Occurrences
+```
+
+**Columns:**
+- **ID**: Transaction ID (optional; if present, updates existing transaction; if empty, creates new transaction)
+- **Type**: `one-time` or `recurring`
+- **Account ID**: Account ID (must exist in the database)
+- **Amount**: Number (positive or negative)
+- **Date**: YYYY-MM-DD (start date for recurring transactions)
+- **Description**: Optional text
+- **Frequency**: `daily`, `weekly`, `monthly`, or `yearly` (only for recurring)
+- **Interval**: Number (only for recurring, defaults to 1)
+- **Day of Week**: 1-7 (only for weekly, optional)
+- **Day of Month**: 1-31 (only for monthly, optional)
+- **End Date**: YYYY-MM-DD (optional, only for recurring, use `-1` for no limit)
+- **Occurrences**: Number (optional, only for recurring, use `-1` for no limit)
+
+**Example:**
+```
+ID	Type	Account ID	Amount	Date	Description	Frequency	Interval	Day of Week	Day of Month	End Date	Occurrences
+	one-time	acc-123	-50.00	2025-01-15	Groceries	0					
+tx-456	recurring	acc-789	2800.00	2025-01-20	Paycheck		weekly	2			-1	-1
+	recurring	acc-123	-1800.00	2025-02-01	Rent		monthly	1		1	2025-12-31	
+```
+
+**Usage:**
+- **Export**: `GET /api/transactions/bulk` returns a TSV file with all transactions (includes transaction IDs and account IDs)
+- **Import**: `POST /api/transactions/bulk` with TSV data in the request body:
+  - If a transaction has an ID, it updates the existing transaction
+  - If a transaction has no ID (empty field), it creates a new transaction
+  - Import validates all data and returns errors for any invalid rows before processing any transactions
 
 ### Projections
 - `GET /api/projections` - Get projected balances (query: accountId, startDate, endDate)

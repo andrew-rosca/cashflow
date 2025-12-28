@@ -254,6 +254,36 @@ export class PrismaDataAdapter implements DataAdapter {
     if (transaction.settlementDays !== undefined) updateData.settlementDays = transaction.settlementDays
     if (transaction.description !== undefined) updateData.description = transaction.description
 
+    // Handle recurrence updates
+    if (transaction.recurrence !== undefined) {
+      if (transaction.recurrence === null) {
+        // Delete recurrence if set to null
+        updateData.recurrence = { delete: true }
+      } else {
+        // Update or create recurrence
+        updateData.recurrence = {
+          upsert: {
+            create: {
+              frequency: transaction.recurrence.frequency,
+              interval: transaction.recurrence.interval ?? null,
+              dayOfWeek: transaction.recurrence.dayOfWeek ?? null,
+              dayOfMonth: transaction.recurrence.dayOfMonth ?? null,
+              endDate: transaction.recurrence.endDate ? transaction.recurrence.endDate.toString() : null,
+              occurrences: transaction.recurrence.occurrences ?? null,
+            },
+            update: {
+              frequency: transaction.recurrence.frequency,
+              interval: transaction.recurrence.interval ?? null,
+              dayOfWeek: transaction.recurrence.dayOfWeek ?? null,
+              dayOfMonth: transaction.recurrence.dayOfMonth ?? null,
+              endDate: transaction.recurrence.endDate ? transaction.recurrence.endDate.toString() : null,
+              occurrences: transaction.recurrence.occurrences ?? null,
+            },
+          },
+        }
+      }
+    }
+
     const updated = await this.prisma.transaction.update({
       where: { id: transactionId },
       data: updateData,

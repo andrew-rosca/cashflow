@@ -68,12 +68,39 @@ export default function Home() {
     month: null,
     endDate: null,
   })
+  const [rawInputDialogOpen, setRawInputDialogOpen] = useState(false)
+  const [rawInputTsv, setRawInputTsv] = useState<string>('')
+  const [rawInputLoading, setRawInputLoading] = useState(false)
+  const [rawInputError, setRawInputError] = useState<string | null>(null)
 
   // Load data
   useEffect(() => {
     loadAccounts()
     loadTransactions()
   }, [])
+
+  // Auto-load transactions when raw input dialog opens
+  useEffect(() => {
+    if (rawInputDialogOpen) {
+      setRawInputError(null)
+      setRawInputLoading(true)
+      fetch('/api/transactions/bulk')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to export transactions')
+          }
+          return response.text()
+        })
+        .then(tsv => {
+          setRawInputTsv(tsv)
+          setRawInputLoading(false)
+        })
+        .catch(error => {
+          setRawInputError(error instanceof Error ? error.message : 'Failed to load transactions')
+          setRawInputLoading(false)
+        })
+    }
+  }, [rawInputDialogOpen])
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -1009,18 +1036,33 @@ export default function Home() {
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                   {selectedTransactionId ? 'Edit Transaction' : 'Add Transaction'}
                 </h3>
-                {selectedTransactionId && (
-                  <button
-                    type="button"
-                    onClick={handleTransactionDelete}
-                    className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                    title="Delete transaction"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {!selectedTransactionId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTransactionDialogOpen(false)
+                        setRawInputDialogOpen(true)
+                      }}
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline"
+                      title="Raw input (TSV)"
+                    >
+                      raw input
+                    </button>
+                  )}
+                  {selectedTransactionId && (
+                    <button
+                      type="button"
+                      onClick={handleTransactionDelete}
+                      className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      title="Delete transaction"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
               <form onSubmit={handleTransactionSubmit} className="space-y-4">
                 <div>
@@ -1119,6 +1161,112 @@ export default function Home() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Raw Input Dialog */}
+        {rawInputDialogOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setRawInputDialogOpen(false)}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-6xl h-[calc(100vh-3rem)] shadow-xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Raw Transaction Input (TSV)
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setRawInputDialogOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {rawInputError && (
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex-shrink-0">
+                  <p className="text-sm text-red-800 dark:text-red-200 whitespace-pre-wrap">{rawInputError}</p>
+                </div>
+              )}
+
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex-shrink-0">
+                  Transaction Data (TSV Format)
+                </label>
+                <textarea
+                  value={rawInputTsv}
+                  onChange={(e) => {
+                    setRawInputTsv(e.target.value)
+                    setRawInputError(null)
+                  }}
+                  rows={30}
+                  className="flex-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm resize-none overflow-auto"
+                  placeholder="Paste or edit TSV transaction data here..."
+                  spellCheck={false}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setRawInputDialogOpen(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!rawInputTsv.trim()) {
+                      setRawInputError('TSV data cannot be empty')
+                      return
+                    }
+                    
+                    setRawInputError(null)
+                    setRawInputLoading(true)
+                    try {
+                      const response = await fetch('/api/transactions/bulk', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/tab-separated-values' },
+                        body: rawInputTsv,
+                      })
+                      
+                      if (!response.ok) {
+                        const errorData = await response.json()
+                        if (errorData.errors && Array.isArray(errorData.errors)) {
+                          setRawInputError(`Validation errors:\n${errorData.errors.join('\n')}`)
+                        } else {
+                          setRawInputError(errorData.error || 'Failed to import transactions')
+                        }
+                        return
+                      }
+                      
+                      const result = await response.json()
+                      // Reload transactions and projections
+                      await loadTransactions()
+                      await loadProjections()
+                      // Close dialog on success
+                      setRawInputDialogOpen(false)
+                      setRawInputTsv('')
+                    } catch (error) {
+                      setRawInputError(error instanceof Error ? error.message : 'Failed to import transactions')
+                    } finally {
+                      setRawInputLoading(false)
+                    }
+                  }}
+                  disabled={rawInputLoading || !rawInputTsv.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {rawInputLoading ? 'Importing...' : 'Import'}
+                </button>
+              </div>
             </div>
           </div>
         )}
