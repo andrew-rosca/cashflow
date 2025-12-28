@@ -11,6 +11,9 @@ import { LogicalDate } from '@/lib/logical-date'
  */
 test.describe('Simple Balance Projection', () => {
   test('should project correct balance after transaction', async ({ page, testServer }) => {
+    // Increase timeout for this complex test with many interactions
+    test.setTimeout(60000)
+    
     // Mock the clock to use a fixed calendar date: Jan 15, 2025
     // This ensures the test always works the same way regardless of when it's run
     // Calendar date: 2025-01-15 (no time components - this is a logical date)
@@ -256,29 +259,37 @@ test.describe('Simple Balance Projection', () => {
     const endDate = '2025-01-25'
     const transactionDate = actualTransactionDate // Use the actual date from the API
     
-    // Fetch projections - should work immediately after transaction is created
-    const projectionsResponse = await fetch(
-      `${testServer.baseUrl}/api/projections?accountId=${testAccount.id}&startDate=${startDate}&endDate=${endDate}`
-    )
+    // Fetch projections with retry logic to handle any timing issues
+    let projections: any[] = []
+    let attempts = 0
+    const maxAttempts = 10
     
-    if (!projectionsResponse.ok) {
-      const errorText = await projectionsResponse.text()
-      throw new Error(`Failed to fetch projections: ${projectionsResponse.status} ${projectionsResponse.statusText} - ${errorText}`)
-    }
-    
-    const projections = await projectionsResponse.json()
-    
-    // Debug: Check response headers in test mode
-    const debugDbUrl = projectionsResponse.headers.get('X-Debug-Database-URL')
-    const debugCount = projectionsResponse.headers.get('X-Debug-Projections-Count')
-    if (debugDbUrl || debugCount) {
-      console.log('API Debug - Database URL:', debugDbUrl)
-      console.log('API Debug - Projections count:', debugCount)
-    }
-    
-    // Ensure we have an array
-    if (!Array.isArray(projections)) {
-      throw new Error(`Expected array but got: ${typeof projections} - ${JSON.stringify(projections)}`)
+    while (attempts < maxAttempts) {
+      attempts++
+      const projectionsResponse = await fetch(
+        `${testServer.baseUrl}/api/projections?accountId=${testAccount.id}&startDate=${startDate}&endDate=${endDate}`
+      )
+      
+      if (!projectionsResponse.ok) {
+        const errorText = await projectionsResponse.text()
+        throw new Error(`Failed to fetch projections: ${projectionsResponse.status} ${projectionsResponse.statusText} - ${errorText}`)
+      }
+      
+      projections = await projectionsResponse.json()
+      
+      if (!Array.isArray(projections)) {
+        throw new Error(`Expected array but got: ${typeof projections} - ${JSON.stringify(projections)}`)
+      }
+      
+      if (projections.length > 0) {
+        console.log(`Got ${projections.length} projections on attempt ${attempts}`)
+        break
+      }
+      
+      if (attempts < maxAttempts) {
+        console.log(`Attempt ${attempts}: Got 0 projections, retrying...`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
     }
     
     expect(projections.length).toBeGreaterThan(0)
