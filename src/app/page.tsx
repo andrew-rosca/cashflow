@@ -156,11 +156,18 @@ export default function Home() {
         return
       }
 
+      // Use the earliest balanceAsOf date among all accounts as the start date
+      // This ensures we include all transactions that affect the accounts
+      const startDate = accounts.reduce((earliest, account) => {
+        const balanceAsOf = LogicalDate.fromString(account.balanceAsOf)
+        return earliest.compare(balanceAsOf) > 0 ? balanceAsOf : earliest
+      }, LogicalDate.fromString(accounts[0].balanceAsOf))
+
       // Get projections for all accounts
       const allProjections: ProjectionData[] = []
       for (const account of accounts) {
         const response = await fetch(
-          `/api/projections?accountId=${account.id}&startDate=${today.toString()}&endDate=${endDate.toString()}&_t=${Date.now()}`,
+          `/api/projections?accountId=${account.id}&startDate=${startDate.toString()}&endDate=${endDate.toString()}&_t=${Date.now()}`,
           {
             cache: 'no-store',
           }

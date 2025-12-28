@@ -505,12 +505,19 @@ export class PrismaDataAdapter implements DataAdapter {
       })
     } else {
       // Different accounts: split into debit and credit
+      // Handle both positive and negative amounts correctly
+      // If amount is positive: money flows from fromAccount to toAccount
+      // If amount is negative: money flows from fromAccount to toAccount (expense/outflow)
+      
       // Debit event (money leaves fromAccount)
       if (fromAccount) {
+        // For positive amounts: debit = -amount (money leaves)
+        // For negative amounts: amount is already negative, use it directly
+        const debitAmount = tx.amount < 0 ? tx.amount : -tx.amount
         events.push({
           date: tx.date,
           accountId: fromAccount.id,
-          amount: -tx.amount, // negative = debit
+          amount: debitAmount, // negative = debit
         })
       }
 
@@ -518,10 +525,15 @@ export class PrismaDataAdapter implements DataAdapter {
       if (toAccount) {
         // Calculate credit date (transaction date + settlement days)
         const creditDate = tx.date.addDays(settlementDays)
+        // For positive amounts: credit = +amount (money arrives)
+        // For negative amounts: credit should also be negative (reverse flow)
+        // But typically negative amounts mean expense, so toAccount might not be tracked
+        // Use absolute value for credit to maintain double-entry consistency
+        const creditAmount = tx.amount < 0 ? -tx.amount : tx.amount
         events.push({
           date: creditDate,
           accountId: toAccount.id,
-          amount: tx.amount, // positive = credit
+          amount: creditAmount, // positive = credit
         })
       }
     }
