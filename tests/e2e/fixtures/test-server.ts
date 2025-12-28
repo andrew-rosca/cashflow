@@ -57,6 +57,11 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
       },
     })
     
+    // Enable WAL mode for better concurrency
+    // This allows multiple readers while a write is in progress
+    await prisma.$queryRawUnsafe('PRAGMA journal_mode=WAL')
+    await prisma.$queryRawUnsafe('PRAGMA synchronous=NORMAL')
+    
     // Clear all existing data first (in case database file was reused)
     await prisma.recurrence.deleteMany({})
     await prisma.transaction.deleteMany({})
