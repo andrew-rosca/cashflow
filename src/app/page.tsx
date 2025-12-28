@@ -261,12 +261,34 @@ export default function Home() {
         const txId = parts[2]
         const tx = transactions.find(t => t.id === txId)
         if (tx) {
-          // Preserve the sign that the user entered
-          const newAmount = parseFloat(editValue) || 0
+          // Get the form amount (which is the displayed amount from getTransactionAmount)
+          const formAmount = parseFloat(editValue) || 0
+          
+          // Reverse the getTransactionAmount transformation for storage
+          const fromAccount = accounts.find(a => a.id === tx.fromAccountId)
+          let storageAmount = formAmount
+          
+          if (fromAccount) {
+            // Editing existing transaction - need to reverse the display transformation
+            // getTransactionAmount: if stored amount is positive, display as negative
+            //                      if stored amount is negative, display as negative (preserved)
+            // So if original stored was positive and we're showing negative, reverse it
+            if (tx.amount > 0 && formAmount < 0) {
+              // Original was positive, displayed as negative, reverse to positive for storage
+              storageAmount = Math.abs(formAmount)
+            } else if (tx.amount < 0 && formAmount < 0) {
+              // Original was negative, displayed as negative, preserve negative
+              storageAmount = formAmount
+            } else if (formAmount > 0) {
+              // User changed to positive - this is unusual for fromAccount, but store as user entered
+              storageAmount = formAmount
+            }
+          }
+          
           await fetch(`/api/transactions/${txId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: newAmount }),
+            body: JSON.stringify({ amount: storageAmount }),
           })
           await loadTransactions()
           // Reload projections after transaction amount is updated
@@ -464,10 +486,41 @@ export default function Home() {
     }
     
     // Use transactionDate state - convert to calendar date string (YYYY-MM-DD)
+    // Get the form amount (which is the displayed amount from getTransactionAmount)
+    let formAmount = parseFloat(formData.get('amount') as string)
+    
+    // Reverse the getTransactionAmount transformation for storage
+    // getTransactionAmount logic: if from tracked account and amount is positive, negate it for display
+    // So if displayed is -49.01 and original stored was 49.01, we need to reverse it
+    const fromAccount = accounts.find(a => a.id === transactionAccountId)
+    let storageAmount = formAmount
+    
+    if (fromAccount && selectedTransactionId && selectedTransaction) {
+      // Editing existing transaction - need to reverse the display transformation
+      // getTransactionAmount: if stored amount is positive, display as negative
+      //                      if stored amount is negative, display as negative (preserved)
+      // So if original stored was positive and we're showing negative, reverse it
+      if (selectedTransaction.amount > 0 && formAmount < 0) {
+        // Original was positive, displayed as negative, reverse to positive for storage
+        storageAmount = Math.abs(formAmount)
+      } else if (selectedTransaction.amount < 0 && formAmount < 0) {
+        // Original was negative, displayed as negative, preserve negative
+        storageAmount = formAmount
+      } else if (formAmount > 0) {
+        // User changed to positive - this is unusual for fromAccount, but store as user entered
+        storageAmount = formAmount
+      }
+    } else if (fromAccount && !selectedTransactionId) {
+      // New transaction from tracked account
+      // If user enters negative, store negative; if positive, store positive
+      // getTransactionAmount will handle the display transformation
+      storageAmount = formAmount
+    }
+    
     const payload: any = {
       fromAccountId: transactionAccountId,
       toAccountId: transactionAccountId, // For now, use same account (transfers will be added later)
-      amount: parseFloat(formData.get('amount') as string),
+      amount: storageAmount,
       date: getDateString(transactionDate), // Send as calendar date string (YYYY-MM-DD)
       description: (formData.get('description') as string) || undefined,
     }
@@ -840,15 +893,24 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                      {editingCell === `tx-date-${tx.id}` ? (
-                        <DateInput
-                          value={editValue ? LogicalDate.fromString(editValue) : LogicalDate.fromString(tx.date)}
-                          onChange={handleDateChange}
-                          onBlur={handleCellBlur}
-                          className="w-40 flex-shrink-0"
-                          autoFocus
-                        />
-                      ) : (
+                        <svg 
+                          className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                          onClick={() => openTransactionDialog(tx.id)}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {editingCell === `tx-date-${tx.id}` ? (
+                          <DateInput
+                            value={editValue ? LogicalDate.fromString(editValue) : LogicalDate.fromString(tx.date)}
+                            onChange={handleDateChange}
+                            onBlur={handleCellBlur}
+                            className="w-40 flex-shrink-0"
+                            autoFocus
+                          />
+                        ) : (
                           <span 
                             className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded"
                             onClick={() => handleCellClick(`tx-date-${tx.id}`, getDateString(tx.date))}
@@ -889,7 +951,7 @@ export default function Home() {
                             className={`text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded ${
                               getTransactionAmount(tx) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
                             }`}
-                            onClick={() => handleCellClick(`tx-amount-${tx.id}`, tx.amount.toString())}
+                            onClick={() => handleCellClick(`tx-amount-${tx.id}`, getTransactionAmount(tx).toString())}
                           >
                             {formatNumber(getTransactionAmount(tx))}
                           </span>
@@ -1111,7 +1173,7 @@ export default function Home() {
                     name="amount"
                     step="0.01"
                     required
-                    defaultValue={selectedTransaction?.amount || ''}
+                    defaultValue={selectedTransaction ? getTransactionAmount(selectedTransaction) : ''}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
