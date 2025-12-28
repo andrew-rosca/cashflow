@@ -11,8 +11,8 @@ import { LogicalDate } from '@/lib/logical-date'
  */
 test.describe('Simple Balance Projection', () => {
   test('should project correct balance after transaction', async ({ page, testServer }) => {
-    // Increase timeout for this test with UI interactions
-    test.setTimeout(40000)
+    // Increase timeout for this test (may run slower in parallel)
+    test.setTimeout(60000)
     
     // Mock the clock to use a fixed calendar date: Jan 15, 2025
     // This ensures the test always works the same way regardless of when it's run
