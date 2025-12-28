@@ -884,11 +884,11 @@ export default function Home() {
                             onBlur={handleCellBlur}
                             onKeyDown={handleKeyPress}
                             autoFocus
-                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1"
+                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1 min-w-0 max-w-[200px] h-5 leading-5"
                           />
                         ) : (
                           <span 
-                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate"
+                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate h-5 leading-5 inline-block"
                             onClick={() => handleCellClick(`tx-notes-${tx.id}`, tx.description || '')}
                           >
                             {tx.description || 'Transaction'}
@@ -950,11 +950,11 @@ export default function Home() {
                             onBlur={handleCellBlur}
                             onKeyDown={handleKeyPress}
                             autoFocus
-                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1"
+                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1 min-w-0 max-w-[200px] h-5 leading-5"
                           />
                         ) : (
                           <span 
-                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate"
+                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate h-5 leading-5 inline-block"
                             onClick={() => handleCellClick(`tx-notes-${tx.id}`, tx.description || '')}
                           >
                             {tx.description || 'Transaction'}
