@@ -799,7 +799,7 @@ export default function Home() {
                         />
                       ) : (
                         <span 
-                          className="text-xs text-gray-500 dark:text-gray-400 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-shrink-0 whitespace-nowrap"
+                          className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-shrink-0 whitespace-nowrap"
                           onClick={() => handleCellClick(`account-date-${account.id}`, getDateString(balanceAsOf))}
                         >
                           {formatDate(balanceAsOf)}
@@ -891,7 +891,7 @@ export default function Home() {
                             className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate h-5 leading-5 inline-block"
                             onClick={() => handleCellClick(`tx-notes-${tx.id}`, tx.description || '')}
                           >
-                            {tx.description || 'Transaction'}
+                            {tx.description || <span className="text-gray-400 dark:text-gray-600">—</span>}
                           </span>
                         )}
                         {editingCell === `tx-amount-${tx.id}` ? (
@@ -957,7 +957,7 @@ export default function Home() {
                             className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate h-5 leading-5 inline-block"
                             onClick={() => handleCellClick(`tx-notes-${tx.id}`, tx.description || '')}
                           >
-                            {tx.description || 'Transaction'}
+                            {tx.description || <span className="text-gray-400 dark:text-gray-600">—</span>}
                           </span>
                         )}
                         {editingCell === `tx-amount-${tx.id}` ? (
