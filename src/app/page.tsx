@@ -158,10 +158,19 @@ export default function Home() {
 
       // Use the earliest balanceAsOf date among all accounts as the start date
       // This ensures we include all transactions that affect the accounts
+      const balanceAsOfToDateString = (balanceAsOf: string | Date): string => {
+        if (typeof balanceAsOf === 'string') {
+          // API returns balanceAsOf as string (YYYY-MM-DD or ISO)
+          return balanceAsOf.split('T')[0]
+        }
+        // Date instance
+        return balanceAsOf.toISOString().slice(0, 10)
+      }
+
       const startDate = accounts.reduce((earliest, account) => {
-        const balanceAsOf = LogicalDate.fromString(account.balanceAsOf)
+        const balanceAsOf = LogicalDate.fromString(balanceAsOfToDateString(account.balanceAsOf))
         return earliest.compare(balanceAsOf) > 0 ? balanceAsOf : earliest
-      }, LogicalDate.fromString(accounts[0].balanceAsOf))
+      }, LogicalDate.fromString(balanceAsOfToDateString(accounts[0].balanceAsOf)))
 
       // Get projections for all accounts
       const allProjections: ProjectionData[] = []
@@ -698,8 +707,8 @@ export default function Home() {
           {/* Left sidebar - Account balances and transactions */}
           <div className="space-y-6 w-80">
             {/* Current Balances */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 w-full">
+              <div className="flex items-center justify-between mb-3 min-w-0">
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Current Balances
                 </h2>
@@ -726,7 +735,7 @@ export default function Home() {
                   return (
                     <div
                       key={account.id}
-                      className="flex items-center gap-2 py-1 px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors min-w-0"
+                      className="grid grid-cols-[minmax(80px,1fr)_max-content_max-content] items-center gap-x-2 gap-y-1 py-1 px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors w-full"
                     >
                       <span 
                         className="text-xs text-gray-400 dark:text-gray-500 min-w-[80px] flex-shrink-0 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
@@ -758,11 +767,11 @@ export default function Home() {
                           onBlur={handleCellBlur}
                           onKeyDown={handleKeyPress}
                           autoFocus
-                          className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 ml-auto text-right w-24"
+                          className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 text-right w-24"
                         />
                       ) : (
                         <span 
-                          className={`text-sm font-mono ml-auto cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded ${
+                          className={`text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded text-right ${
                             account.initialBalance < 0 
                               ? 'text-red-600 dark:text-red-400' 
                               : 'text-gray-900 dark:text-gray-100'
@@ -779,8 +788,8 @@ export default function Home() {
             </div>
 
             {/* Upcoming Transactions */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 w-full">
+              <div className="flex items-center justify-between mb-3 min-w-0">
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Upcoming Transactions
                 </h2>
@@ -816,7 +825,7 @@ export default function Home() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         <span 
-                          className="text-sm text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded"
+                          className="text-sm text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded whitespace-nowrap flex-shrink-0"
                           onClick={() => openTransactionDialog(tx.id)}
                         >
                           {formatDate(tx.date)}
@@ -829,11 +838,11 @@ export default function Home() {
                             onBlur={handleCellBlur}
                             onKeyDown={handleKeyPress}
                             autoFocus
-                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1 min-w-0 max-w-[200px] h-5 leading-5"
+                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1 min-w-0 h-5 leading-5"
                           />
                         ) : (
                           <span 
-                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate h-5 leading-5 inline-block"
+                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 min-w-0 truncate h-5 leading-5 inline-block"
                             onClick={() => handleCellClick(`tx-notes-${tx.id}`, tx.description || '')}
                           >
                             {tx.description || <span className="text-gray-400 dark:text-gray-600">—</span>}
@@ -895,11 +904,11 @@ export default function Home() {
                             onBlur={handleCellBlur}
                             onKeyDown={handleKeyPress}
                             autoFocus
-                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1 min-w-0 max-w-[200px] h-5 leading-5"
+                            className="text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 flex-1 min-w-0 h-5 leading-5"
                           />
                         ) : (
                           <span 
-                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 truncate h-5 leading-5 inline-block"
+                            className="text-sm text-gray-900 dark:text-gray-100 cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded flex-1 min-w-0 truncate h-5 leading-5 inline-block"
                             onClick={() => handleCellClick(`tx-notes-${tx.id}`, tx.description || '')}
                           >
                             {tx.description || <span className="text-gray-400 dark:text-gray-600">—</span>}
@@ -934,18 +943,18 @@ export default function Home() {
           </div>
 
           {/* Right side - Projection table */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden justify-self-start w-fit max-w-full">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-auto text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                    <th className="text-left py-2 px-4 font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide text-xs">
+                    <th className="text-left py-2 px-4 font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide text-xs whitespace-nowrap">
                       Date
                     </th>
                     {accounts.map(account => (
                       <th
                         key={account.id}
-                        className="text-right py-2 px-4 font-medium text-gray-900 dark:text-gray-100"
+                        className="text-right py-2 px-4 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap"
                       >
                         {account.name}
                       </th>
@@ -960,7 +969,7 @@ export default function Home() {
                         idx % 5 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''
                       }`}
                     >
-                      <td className="py-2 px-4 text-gray-600 dark:text-gray-400 font-medium">
+                      <td className="py-2 px-4 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
                         {formatDate(date)}
                       </td>
                       {accounts.map(account => {
@@ -968,7 +977,7 @@ export default function Home() {
                         return (
                           <td
                             key={account.id}
-                            className="py-2 px-4 text-right font-mono"
+                            className="py-2 px-4 text-right font-mono whitespace-nowrap"
                           >
                             {balance !== null ? (
                               <span className={balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}>
