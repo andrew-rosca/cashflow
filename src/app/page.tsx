@@ -592,9 +592,74 @@ export default function Home() {
 
   const projectionDates = getDatesWithBalanceChanges()
 
+  // Helper function to calculate next occurrence date for recurring transactions
+  const getNextOccurrenceDate = (tx: Transaction): LogicalDate => {
+    if (!tx.recurrence) return LogicalDate.fromString(tx.date)
+    
+    const today = getToday()
+    const { frequency, interval = 1, dayOfWeek, dayOfMonth, endDate } = tx.recurrence
+    let currentDate = LogicalDate.fromString(tx.date)
+    
+    // If the start date is in the future, that's the next occurrence
+    if (currentDate.compare(today) > 0) {
+      return currentDate
+    }
+    
+    // Find the next occurrence after today
+    let iterations = 0
+    const maxIterations = 10000 // Safety check to prevent infinite loops
+    
+    while (currentDate.compare(today) <= 0 && iterations < maxIterations) {
+      iterations++
+      
+      switch (frequency) {
+        case 'daily':
+          currentDate = currentDate.addDays(interval)
+          break
+        case 'weekly':
+          currentDate = currentDate.addDays(7 * interval)
+          // Note: dayOfWeek is not currently used in weekly recurrences
+          // Weekly recurrences just repeat every N weeks from the start date
+          break
+        case 'monthly':
+          currentDate = currentDate.addMonths(interval)
+          if (dayOfMonth !== undefined && dayOfMonth !== null) {
+            // Set to specific day of month, handling month-end edge cases
+            const daysInMonth = currentDate.daysInMonth
+            const targetDay = Math.min(dayOfMonth, daysInMonth)
+            currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+          }
+          break
+        case 'yearly':
+          currentDate = currentDate.addYears(interval)
+          break
+      }
+      
+      // Check if we've exceeded the end date
+      if (endDate) {
+        const endDateObj = LogicalDate.fromString(endDate)
+        if (currentDate.compare(endDateObj) > 0) {
+          // No more occurrences, return the original date
+          return LogicalDate.fromString(tx.date)
+        }
+      }
+    }
+    
+    // If we hit max iterations, return the original date as fallback
+    if (iterations >= maxIterations) {
+      return LogicalDate.fromString(tx.date)
+    }
+    
+    return currentDate
+  }
+
   // Separate one-time and recurring transactions
   const oneTimeTransactions = transactions.filter(t => !t.recurrence)
-  const recurringTransactions = transactions.filter(t => t.recurrence)
+  const recurringTransactions = transactions.filter(t => t.recurrence).map(tx => ({
+    ...tx,
+    // Override the date with the next occurrence date for display
+    date: getNextOccurrenceDate(tx).toString(),
+  }))
 
   // Get selected transaction for dialog
   const selectedTransaction = selectedTransactionId 

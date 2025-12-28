@@ -17,7 +17,22 @@ export class PrismaDataAdapter implements DataAdapter {
   private prisma: PrismaClient
 
   constructor(prismaInstance?: PrismaClient) {
-    this.prisma = prismaInstance ?? defaultPrisma
+    if (prismaInstance) {
+      this.prisma = prismaInstance
+    } else if (process.env.NODE_ENV === 'test') {
+      // In test mode, always create a fresh Prisma client
+      // This ensures each adapter instance uses the current DATABASE_URL
+      // and avoids caching issues across test runs
+      const dbUrl = process.env.DATABASE_URL
+      console.log('[PrismaDataAdapter] Creating new PrismaClient in test mode')
+      console.log('[PrismaDataAdapter] DATABASE_URL:', dbUrl?.substring(0, 80) + (dbUrl && dbUrl.length > 80 ? '...' : ''))
+      this.prisma = new PrismaClient()
+      // Verify the client is using the correct database by checking its datasource
+      console.log('[PrismaDataAdapter] PrismaClient created, will use DATABASE_URL from process.env')
+    } else {
+      // In production/development, use the singleton Proxy
+      this.prisma = defaultPrisma
+    }
   }
   // Accounts
   async getAccounts(userId: string): Promise<Account[]> {
@@ -91,21 +106,44 @@ export class PrismaDataAdapter implements DataAdapter {
   }): Promise<Transaction[]> {
     const whereClause: any = { userId }
     
+    // Build account filter
+    const accountConditions: any[] = []
     if (filters?.accountId) {
-      whereClause.OR = [
-        { fromAccountId: filters.accountId },
-        { toAccountId: filters.accountId },
-      ]
+      accountConditions.push({ fromAccountId: filters.accountId })
+      accountConditions.push({ toAccountId: filters.accountId })
     }
-
+    
+    // Build date filter: include ALL recurring transactions (regardless of start date)
+    // because they may have future occurrences even if they started in the past.
+    // One-time transactions are filtered by their date field.
+    const dateConditions: any[] = []
     if (filters?.startDate || filters?.endDate) {
-      whereClause.date = {}
-      if (filters.startDate) {
-        whereClause.date.gte = filters.startDate.toString()
-      }
-      if (filters.endDate) {
-        whereClause.date.lte = filters.endDate.toString()
-      }
+      dateConditions.push(
+        // One-time transactions within the date range
+        {
+          recurrence: null,
+          date: {
+            ...(filters.startDate && { gte: filters.startDate.toString() }),
+            ...(filters.endDate && { lte: filters.endDate.toString() }),
+          },
+        },
+        // All recurring transactions (they'll be materialized client-side to show next occurrence)
+        {
+          recurrence: { isNot: null },
+        }
+      )
+    }
+    
+    // Combine filters: account filter AND (date filter OR all transactions if no date filter)
+    if (accountConditions.length > 0 && dateConditions.length > 0) {
+      whereClause.AND = [
+        { OR: accountConditions },
+        { OR: dateConditions },
+      ]
+    } else if (accountConditions.length > 0) {
+      whereClause.OR = accountConditions
+    } else if (dateConditions.length > 0) {
+      whereClause.OR = dateConditions
     }
 
     const transactions = await this.prisma.transaction.findMany({
@@ -256,19 +294,40 @@ export class PrismaDataAdapter implements DataAdapter {
   }): Promise<ProjectionData[]> {
     const { accountId, startDate, endDate } = options
 
+    // Log in test mode to debug connection issues
+    if (process.env.NODE_ENV === 'test') {
+      const dbUrl = process.env.DATABASE_URL
+      console.error('[getProjections] Called with userId:', userId, 'accountId:', accountId)
+      console.error('[getProjections] Current DATABASE_URL:', dbUrl?.substring(0, 80) + (dbUrl && dbUrl.length > 80 ? '...' : ''))
+    }
+
     // Get accounts to project
     const accountsToProject = accountId
       ? [await this.getAccount(userId, accountId)]
       : await this.getAccounts(userId)
 
     const accounts = accountsToProject.filter(a => a !== null) as Account[]
-    if (accounts.length === 0) return []
+    if (accounts.length === 0) {
+      if (process.env.NODE_ENV === 'test') {
+        console.error('[getProjections] No accounts found - this will return empty array')
+      }
+      return []
+    }
+
+    if (process.env.NODE_ENV === 'test') {
+      console.error('[getProjections] Found', accounts.length, 'account(s)')
+    }
 
     // Get all transactions (both one-time and recurring)
     // Don't filter by date here - we want all transactions and will filter in the projection loop
     const transactions = await this.getTransactions(userId, {
       accountId,
     })
+    
+    if (process.env.NODE_ENV === 'test') {
+      console.error('[getProjections] Found', transactions.length, 'transaction(s)')
+    }
+    
 
     // Materialize all transactions into specific date events
     const events: Array<{
@@ -403,6 +462,7 @@ export class PrismaDataAdapter implements DataAdapter {
     const toAccount = trackedAccounts.find(a => a.id === tx.toAccountId)
     const settlementDays = tx.settlementDays || 0
 
+
     // If both accounts are the same (self-transfer or expense/income), apply the amount directly
     // This represents a direct change to the account balance
     if (fromAccount && toAccount && tx.fromAccountId === tx.toAccountId) {
@@ -438,4 +498,22 @@ export class PrismaDataAdapter implements DataAdapter {
   }
 }
 
-export const dataAdapter = new PrismaDataAdapter()
+// Create a function that returns the dataAdapter singleton
+// This ensures the Prisma client is always current (via the Proxy)
+let _dataAdapter: PrismaDataAdapter | null = null
+
+function getDataAdapter(): PrismaDataAdapter {
+  // In test mode, always create a fresh adapter to avoid caching issues
+  // The adapter will still use the Proxy for prisma, which checks DATABASE_URL
+  if (process.env.NODE_ENV === 'test') {
+    return new PrismaDataAdapter()
+  }
+  
+  // In production/development, use singleton for performance
+  if (!_dataAdapter) {
+    _dataAdapter = new PrismaDataAdapter()
+  }
+  return _dataAdapter
+}
+
+export const dataAdapter = getDataAdapter()

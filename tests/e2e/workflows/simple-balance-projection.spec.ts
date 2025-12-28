@@ -256,16 +256,30 @@ test.describe('Simple Balance Projection', () => {
     const endDate = '2025-01-25'
     const transactionDate = actualTransactionDate // Use the actual date from the API
     
-    // Wait a bit to ensure transaction is fully committed to database
-    await page.waitForTimeout(500)
-    
+    // Fetch projections - should work immediately after transaction is created
     const projectionsResponse = await fetch(
       `${testServer.baseUrl}/api/projections?accountId=${testAccount.id}&startDate=${startDate}&endDate=${endDate}`
     )
+    
     if (!projectionsResponse.ok) {
-      throw new Error(`Failed to fetch projections: ${projectionsResponse.status} ${projectionsResponse.statusText}`)
+      const errorText = await projectionsResponse.text()
+      throw new Error(`Failed to fetch projections: ${projectionsResponse.status} ${projectionsResponse.statusText} - ${errorText}`)
     }
+    
     const projections = await projectionsResponse.json()
+    
+    // Debug: Check response headers in test mode
+    const debugDbUrl = projectionsResponse.headers.get('X-Debug-Database-URL')
+    const debugCount = projectionsResponse.headers.get('X-Debug-Projections-Count')
+    if (debugDbUrl || debugCount) {
+      console.log('API Debug - Database URL:', debugDbUrl)
+      console.log('API Debug - Projections count:', debugCount)
+    }
+    
+    // Ensure we have an array
+    if (!Array.isArray(projections)) {
+      throw new Error(`Expected array but got: ${typeof projections} - ${JSON.stringify(projections)}`)
+    }
     
     expect(projections.length).toBeGreaterThan(0)
     

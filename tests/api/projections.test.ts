@@ -136,6 +136,48 @@ describe('Projection Engine Tests', () => {
       const balances = projections.map(p => p.balance)
       expect(balances).toEqual([1000, 800, 1300, 1300, 1300]) // -200 on Dec 2, +500 on Dec 3
     })
+
+    it('should match e2e test scenario: account with $100, expense of -$15 on Jan 20', async () => {
+      // Create account matching e2e test: $100 balance as of Jan 15, 2025
+      const testAccount = await adapter.createAccount(TEST_USER_ID, {
+        name: 'Test Account',
+        initialBalance: 100,
+        balanceAsOf: LogicalDate.fromString('2025-01-15'),
+      })
+
+      // Create expense transaction: -$15 on Jan 20 (same account to same account = self-transfer/expense)
+      await adapter.createTransaction(TEST_USER_ID, {
+        fromAccountId: testAccount.id,
+        toAccountId: testAccount.id,
+        amount: -15,
+        date: LogicalDate.fromString('2025-01-20'),
+        description: 'Test Expense',
+      })
+
+      const startDate = LogicalDate.fromString('2025-01-15')
+      const endDate = LogicalDate.fromString('2025-01-25')
+
+      const projections = await adapter.getProjections(TEST_USER_ID, {
+        accountId: testAccount.id,
+        startDate,
+        endDate,
+      })
+
+      // Should have projections for each day
+      expect(projections.length).toBeGreaterThan(0)
+      
+      // Find projection for Jan 20 (transaction date) and Jan 21 (day after)
+      const jan20 = projections.find(p => p.date.toString() === '2025-01-20')
+      const jan21 = projections.find(p => p.date.toString() === '2025-01-21')
+
+      expect(jan20).toBeDefined()
+      expect(jan21).toBeDefined()
+      
+      // Balance on Jan 20 should be 100 - 15 = 85
+      expect(jan20!.balance).toBe(85)
+      // Balance on Jan 21 should still be 85 (no more transactions)
+      expect(jan21!.balance).toBe(85)
+    })
   })
 
   describe('F016: Projection engine materializes recurring transactions', () => {

@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import DateInput from '@/components/DateInput'
-import { format } from 'date-fns'
+import { LogicalDate, today } from '@/lib/logical-date'
 
 export default function DateInputTest() {
-  const [date1, setDate1] = useState(new Date())
-  const [date2, setDate2] = useState(new Date(2025, 5, 15))
-  const [date3, setDate3] = useState(new Date(2024, 11, 31))
+  const [date1, setDate1] = useState(today())
+  const [date2, setDate2] = useState(LogicalDate.from(2025, 6, 15))
+  const [date3, setDate3] = useState(LogicalDate.from(2024, 12, 31))
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 p-8">
@@ -33,7 +33,7 @@ export default function DateInputTest() {
                 className="w-48"
               />
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Current value: {format(date1, 'dd MMM yyyy')}
+                Current value: {date1.toString()}
               </p>
             </div>
           </div>
@@ -49,7 +49,7 @@ export default function DateInputTest() {
                 className="w-48"
               />
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Current value: {format(date2, 'dd MMM yyyy')}
+                Current value: {date2.toString()}
               </p>
             </div>
           </div>
@@ -65,7 +65,7 @@ export default function DateInputTest() {
                 className="w-48"
               />
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Current value: {format(date3, 'dd MMM yyyy')}
+                Current value: {date3.toString()}
               </p>
             </div>
           </div>
