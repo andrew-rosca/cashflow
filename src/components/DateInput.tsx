@@ -476,11 +476,15 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
           onChange={handleDayChange}
           onKeyDown={(e) => handleKeyDown(e, 'day')}
           onBlur={(e) => handleDayBlur(e)}
-          onClick={(e) => {
+          onMouseDown={(e) => {
             e.stopPropagation()
+            // Prevent default to stop browser from setting cursor position
+            e.preventDefault()
             setIsOpen(true)
             setShowCalendar(true)
             setActiveField('day')
+            // Focus and select after preventing default
+            dayInputRef.current?.focus()
             dayInputRef.current?.select()
           }}
           onFocus={() => {
@@ -500,11 +504,15 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
             onChange={handleMonthChange}
             onKeyDown={(e) => handleKeyDown(e, 'month')}
             onBlur={(e) => handleMonthBlur(e)}
-            onClick={(e) => {
+            onMouseDown={(e) => {
               e.stopPropagation()
+              // Prevent default to stop browser from setting cursor position
+              e.preventDefault()
               setIsOpen(true)
               setShowCalendar(true)
               setActiveField('month')
+              // Focus and select after preventing default
+              monthInputRef.current?.focus()
               monthInputRef.current?.select()
             }}
             onFocus={() => {
@@ -539,11 +547,15 @@ export default function DateInput({ value, onChange, onBlur, className = '', pla
           onChange={handleYearChange}
           onKeyDown={(e) => handleKeyDown(e, 'year')}
           onBlur={(e) => handleYearBlur(e)}
-          onClick={(e) => {
+          onMouseDown={(e) => {
             e.stopPropagation()
+            // Prevent default to stop browser from setting cursor position
+            e.preventDefault()
             setIsOpen(true)
             setShowCalendar(true)
             setActiveField('year')
+            // Focus and select after preventing default
+            yearInputRef.current?.focus()
             yearInputRef.current?.select()
           }}
           onFocus={() => {
