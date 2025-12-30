@@ -11,9 +11,32 @@ function LoginForm() {
   const callbackUrl = searchParams.get('callbackUrl') || '/'
 
   useEffect(() => {
-    // Clear any error when component mounts
-    setError(null)
-  }, [])
+    // Check for error in URL parameters (from NextAuth callback)
+    const urlError = searchParams.get('error')
+    if (urlError) {
+      let errorMessage = 'Authentication failed. Please try again.'
+      
+      // Provide more specific error messages
+      switch (urlError) {
+        case 'Callback':
+          errorMessage = 'Authentication callback failed. Please check your configuration and try again.'
+          break
+        case 'Configuration':
+          errorMessage = 'Authentication configuration error. Please contact support.'
+          break
+        case 'AccessDenied':
+          errorMessage = 'Access denied. Please try again or contact support.'
+          break
+        case 'Verification':
+          errorMessage = 'Verification failed. Please try again.'
+          break
+        default:
+          errorMessage = `Authentication error: ${urlError}. Please try again.`
+      }
+      
+      setError(errorMessage)
+    }
+  }, [searchParams])
 
   const handleSignIn = async (provider: 'google' | 'apple') => {
     try {
