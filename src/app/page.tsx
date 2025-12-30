@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { signOut } from 'next-auth/react'
 import DateInput from '@/components/DateInput'
 import Tooltip from '@/components/Tooltip'
 import RecurrenceControl from '@/components/RecurrenceControl'
@@ -74,6 +75,7 @@ export default function Home() {
   const [rawInputTsv, setRawInputTsv] = useState<string>('')
   const [rawInputLoading, setRawInputLoading] = useState(false)
   const [rawInputError, setRawInputError] = useState<string | null>(null)
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   
   // Expanded rows state (track by date string)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -260,7 +262,6 @@ export default function Home() {
         // Use the date from the ref if available (from handleDateChange), otherwise use editValue
         // This ensures we get the most recent value even if state hasn't updated yet
         const dateStr = dateValueRef.current[editingCell] || editValue
-        console.log('[CLIENT] Saving date:', dateStr, 'for account:', accountId, 'from ref:', !!dateValueRef.current[editingCell])
         // Clear the ref after using it
         delete dateValueRef.current[editingCell]
         const response = await fetch(`/api/accounts/${accountId}`, {
@@ -269,15 +270,10 @@ export default function Home() {
           body: JSON.stringify({ balanceAsOf: dateStr }),
         })
         if (!response.ok) {
-          console.error('[CLIENT] Failed to save date:', response.status, response.statusText)
+          console.error('Failed to save date:', response.status, response.statusText)
           return
         }
-        const updated = await response.json()
-        // balanceAsOf should always be a string (YYYY-MM-DD) from the API
-        const returnedDateStr = typeof updated.balanceAsOf === 'string' 
-          ? updated.balanceAsOf.split('T')[0] 
-          : updated.balanceAsOf.toString()
-        console.log('[CLIENT] Saved account date - returned:', updated.balanceAsOf, '-> extracted:', returnedDateStr, 'expected:', dateStr)
+        await response.json()
         // Reload accounts to get the updated data
         await loadAccounts()
       } else if (parts[0] === 'account' && parts[1] === 'balance') {
@@ -593,9 +589,6 @@ export default function Home() {
     // Get account name - use fromAccount (primary account for the transaction)
     const account = accounts.find(a => a.id === tx.fromAccountId)
     const accountName = account?.name || 'Unknown Account'
-    
-    // Debug: uncomment to verify tooltip function is being called
-    // console.log('Generating tooltip for transaction:', tx.id, 'account:', accountName)
     
     if (tx.recurrence) {
       const { frequency, interval = 1, dayOfMonth } = tx.recurrence
@@ -1249,6 +1242,21 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {/* Settings icon */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => setSettingsDialogOpen(true)}
+                className="flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-2"
+                title="Settings"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="text-xs">Settings</span>
+              </button>
+            </div>
           </div>
 
           {/* Right side - Projection table */}
@@ -1719,6 +1727,49 @@ export default function Home() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {rawInputLoading ? 'Importing...' : 'Import'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Dialog */}
+        {settingsDialogOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setSettingsDialogOpen(false)}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Settings
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setSettingsDialogOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await signOut({ callbackUrl: '/login' })
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign Out
                 </button>
               </div>
             </div>

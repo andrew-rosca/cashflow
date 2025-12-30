@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dataAdapter } from '@/lib/prisma-adapter'
 import { LogicalDate } from '@/lib/logical-date'
-
-const getCurrentUserId = () => 'user-1' // TODO: Replace with actual auth
+import { getCurrentUserId } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = getCurrentUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     
     const filters = {
@@ -43,7 +45,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = getCurrentUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const body = await request.json()
 
     // Ensure amount is a number (not a string)

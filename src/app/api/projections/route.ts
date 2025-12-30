@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaDataAdapter } from '@/lib/prisma-adapter'
 import { LogicalDate } from '@/lib/logical-date'
-
-const getCurrentUserId = () => 'user-1' // TODO: Replace with actual auth
+import { getCurrentUserId } from '@/lib/auth'
 
 // In test mode, create fresh adapter on each request to avoid caching issues
 // In production, we'd use the singleton for performance
@@ -19,7 +18,10 @@ function getDataAdapter() {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = getCurrentUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     
     const accountId = searchParams.get('accountId') ?? undefined
@@ -39,30 +41,16 @@ export async function GET(request: NextRequest) {
 
     const adapter = getDataAdapter()
     
-    // In test mode, log debug info
-    if (process.env.NODE_ENV === 'test') {
-      const dbUrl = process.env.DATABASE_URL
-      console.error('[projections API] DATABASE_URL:', dbUrl?.substring(0, 80))
-      console.error('[projections API] Request params - accountId:', accountId, 'startDate:', startDateParam, 'endDate:', endDateParam)
-    }
-    
     const projections = await adapter.getProjections(userId, {
       accountId,
       startDate,
       endDate,
     })
     
-    // In test mode, add debug info to response headers
     const headers: Record<string, string> = {
       'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       'Pragma': 'no-cache',
       'Expires': '0',
-    }
-    
-    if (process.env.NODE_ENV === 'test') {
-      headers['X-Debug-Database-URL'] = (process.env.DATABASE_URL || 'not-set').substring(0, 50)
-      headers['X-Debug-Projections-Count'] = projections.length.toString()
-      console.error('[projections API] Returning', projections.length, 'projections')
     }
 
     // Convert LogicalDate objects to calendar date strings (YYYY-MM-DD) for the response

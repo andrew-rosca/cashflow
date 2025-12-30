@@ -23,12 +23,7 @@ export class PrismaDataAdapter implements DataAdapter {
       // In test mode, always create a fresh Prisma client
       // This ensures each adapter instance uses the current DATABASE_URL
       // and avoids caching issues across test runs
-      const dbUrl = process.env.DATABASE_URL
-      console.log('[PrismaDataAdapter] Creating new PrismaClient in test mode')
-      console.log('[PrismaDataAdapter] DATABASE_URL:', dbUrl?.substring(0, 80) + (dbUrl && dbUrl.length > 80 ? '...' : ''))
       this.prisma = new PrismaClient()
-      // Verify the client is using the correct database by checking its datasource
-      console.log('[PrismaDataAdapter] PrismaClient created, will use DATABASE_URL from process.env')
     } else {
       // In production/development, use the singleton Proxy
       this.prisma = defaultPrisma
@@ -324,13 +319,6 @@ export class PrismaDataAdapter implements DataAdapter {
   }): Promise<ProjectionData[]> {
     const { accountId, startDate, endDate } = options
 
-    // Log in test mode to debug connection issues
-    if (process.env.NODE_ENV === 'test') {
-      const dbUrl = process.env.DATABASE_URL
-      console.error('[getProjections] Called with userId:', userId, 'accountId:', accountId)
-      console.error('[getProjections] Current DATABASE_URL:', dbUrl?.substring(0, 80) + (dbUrl && dbUrl.length > 80 ? '...' : ''))
-    }
-
     // Get accounts to project
     const accountsToProject = accountId
       ? [await this.getAccount(userId, accountId)]
@@ -338,14 +326,7 @@ export class PrismaDataAdapter implements DataAdapter {
 
     const accounts = accountsToProject.filter(a => a !== null) as Account[]
     if (accounts.length === 0) {
-      if (process.env.NODE_ENV === 'test') {
-        console.error('[getProjections] No accounts found - this will return empty array')
-      }
       return []
-    }
-
-    if (process.env.NODE_ENV === 'test') {
-      console.error('[getProjections] Found', accounts.length, 'account(s)')
     }
 
     // Get all transactions (both one-time and recurring)
@@ -353,10 +334,6 @@ export class PrismaDataAdapter implements DataAdapter {
     const transactions = await this.getTransactions(userId, {
       accountId,
     })
-    
-    if (process.env.NODE_ENV === 'test') {
-      console.error('[getProjections] Found', transactions.length, 'transaction(s)')
-    }
     
 
     // Materialize all transactions into specific date events

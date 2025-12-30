@@ -22,9 +22,6 @@ function getPrismaClient(): PrismaClient {
     // This ensures we never use a stale client from a previous test run
     if (globalForPrisma.prisma && globalForPrisma.databaseUrl !== currentDatabaseUrl) {
       // DATABASE_URL changed - disconnect old client immediately
-      console.error('[getPrismaClient] DATABASE_URL changed, disconnecting old client')
-      console.error('[getPrismaClient] Old URL:', globalForPrisma.databaseUrl?.substring(0, 80))
-      console.error('[getPrismaClient] New URL:', currentDatabaseUrl?.substring(0, 80))
       globalForPrisma.prisma.$disconnect().catch(() => {})
       globalForPrisma.prisma = undefined
       globalForPrisma.databaseUrl = undefined
@@ -36,8 +33,6 @@ function getPrismaClient(): PrismaClient {
       if (globalForPrisma.prisma) {
         globalForPrisma.prisma.$disconnect().catch(() => {})
       }
-      console.error('[getPrismaClient] Creating new PrismaClient in test mode')
-      console.error('[getPrismaClient] DATABASE_URL:', currentDatabaseUrl?.substring(0, 80) + (currentDatabaseUrl && currentDatabaseUrl.length > 80 ? '...' : ''))
       globalForPrisma.prisma = new PrismaClient()
       globalForPrisma.databaseUrl = currentDatabaseUrl
     }

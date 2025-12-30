@@ -7,16 +7,17 @@ import {
   tsvRowToTransaction,
   TSV_HEADER,
 } from '@/lib/tsv-transactions'
-
-const getCurrentUserId = () => 'user-1' // TODO: Replace with actual auth
-
+import { getCurrentUserId } from '@/lib/auth'
 
 /**
  * Export transactions as TSV
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = getCurrentUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     
     // Get all transactions
     const transactions = await dataAdapter.getTransactions(userId)
@@ -42,7 +43,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = getCurrentUserId()
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const tsv = await request.text()
     
     if (!tsv.trim()) {
