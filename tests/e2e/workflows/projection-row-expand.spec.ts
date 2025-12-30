@@ -145,9 +145,9 @@ test.describe('Projection Row Expand', () => {
     // Click to expand - click on the row itself
     await dec15Row.click()
     
-    // Wait for the expanded row to appear - check for the blue background or the description
-    // Expanded rows have bg-blue-50/30 or bg-blue-900/20 class
-    await page.waitForSelector('tbody tr.bg-blue-50\\/30, tbody tr.bg-blue-900\\/20', { timeout: 5000 })
+    // Wait for the expanded row to appear - check for the gray background or the description
+    // Expanded rows have bg-gray-50/40 or bg-gray-800/30 class
+    await page.waitForSelector('tbody tr.bg-gray-50\\/40, tbody tr.bg-gray-800\\/30', { timeout: 5000 })
     
     // Now look for the expanded row with the transaction description
     const expandedRowWithText = page.locator('tbody tr').filter({ hasText: 'One-time expense' })
@@ -204,12 +204,12 @@ test.describe('Projection Row Expand', () => {
     const recurringIconPath = recurringIcon.locator('path[d*="M4 4v5h.582"]')
     await expect(recurringIconPath).toBeVisible()
     
-    // Step 8: Verify expanded rows have the correct background color (blue tint)
-    // Check that the expanded row has a blue background (bg-blue-50/30 or bg-blue-900/20)
+    // Step 8: Verify expanded rows have the correct background color (gray tint)
+    // Check that the expanded row has a gray background (bg-gray-50/40 or bg-gray-800/30)
     const bgColor = await jan12ExpandedRow.evaluate((el) => window.getComputedStyle(el).backgroundColor)
-    // The background should be blue-tinted - bg-blue-50/30 is rgba(239, 246, 255, 0.3)
-    // or bg-blue-900/20 in dark mode
-    expect(bgColor).toMatch(/rgba?\(.*239.*246.*255|rgba?\(.*59.*130.*246|rgba?\(.*37.*99.*235/)
+    // The background should be gray-tinted - bg-gray-50/40 or bg-gray-800/30 in dark mode
+    // These are subtle gray backgrounds, not blue
+    expect(bgColor).toMatch(/rgba?\(.*249.*250.*251|rgba?\(.*31.*41.*55|rgba?\(.*17.*24.*39/)
   })
 })
 

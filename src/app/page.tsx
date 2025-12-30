@@ -930,11 +930,7 @@ export default function Home() {
                         />
                       ) : (
                         <span 
-                          className={`text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded text-right ${
-                            account.initialBalance < 0 
-                              ? 'text-red-600 dark:text-red-400' 
-                              : 'text-gray-900 dark:text-gray-100'
-                          }`}
+                          className="text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded text-right text-gray-900 dark:text-gray-100"
                           onClick={() => handleCellClick(`account-balance-${account.id}`, account.initialBalance.toString())}
                         >
                           {formatNumber(account.initialBalance)}
@@ -1019,9 +1015,7 @@ export default function Home() {
                           />
                         ) : (
                           <span 
-                            className={`text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded ${
-                              getTransactionAmount(tx) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
-                            }`}
+                            className="text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded text-gray-900 dark:text-gray-100"
                             onClick={() => handleCellClick(`tx-amount-${tx.id}`, getTransactionAmount(tx).toString())}
                           >
                             {formatNumber(getTransactionAmount(tx))}
@@ -1085,9 +1079,7 @@ export default function Home() {
                           />
                         ) : (
                           <span 
-                            className={`text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded ${
-                              getTransactionAmount(tx) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
-                            }`}
+                            className="text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded text-gray-900 dark:text-gray-100"
                             onClick={() => handleCellClick(`tx-amount-${tx.id}`, getTransactionAmount(tx).toString())}
                           >
                             {formatNumber(getTransactionAmount(tx))}
@@ -1143,7 +1135,7 @@ export default function Home() {
                                 className="py-2 px-4 text-right font-mono whitespace-nowrap"
                               >
                                 {balance !== null ? (
-                                  <span className={balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}>
+                                  <span className="text-gray-900 dark:text-gray-100">
                                     {formatNumber(balance)}
                                   </span>
                                 ) : (
@@ -1164,9 +1156,9 @@ export default function Home() {
                               if (accountTransactions.length === 0) return null
                               
                               return accountTransactions.map(({ transaction, amount }) => (
-                                <tr key={`${account.id}-${transaction.id}`} className="border-b border-gray-100 dark:border-gray-800 bg-blue-50/30 dark:bg-blue-900/20">
+                                <tr key={`${account.id}-${transaction.id}`} className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30">
                                   <td className="py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px]">
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1 pl-6 text-xs">
                                       {transaction.recurrence ? (
                                         <svg 
                                           className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" 
@@ -1194,10 +1186,10 @@ export default function Home() {
                                   {accounts.map(acc => (
                                     <td
                                       key={acc.id}
-                                      className="py-2 px-4 text-right font-mono whitespace-nowrap"
+                                      className="py-2 px-4 text-right font-mono whitespace-nowrap text-xs"
                                     >
                                       {acc.id === account.id ? (
-                                        <span className={`text-gray-500 dark:text-gray-400 ${amount < 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                                        <span className="text-gray-500 dark:text-gray-400">
                                           {formatNumber(amount)}
                                         </span>
                                       ) : (
