@@ -250,6 +250,93 @@ describe('Projection Engine Tests', () => {
       expect(feb16!.balance).toBeLessThan(jan16!.balance)
     })
 
+    it('should materialize weekly recurring transactions with dayOfWeek when start date differs', async () => {
+      // Transaction starts on Thursday (2025-12-04) but should recur every 2 weeks on Friday (dayOfWeek: 5)
+      // This tests the bug fix where dayOfWeek was being ignored
+      // Using December dates to match the account's balanceAsOf date
+      await adapter.createTransaction(TEST_USER_ID, {
+        fromAccountId: salaryAccountId,
+        toAccountId: savingsAccountId,
+        amount: 9000,
+        date: LogicalDate.fromString('2025-12-04'), // Thursday, Dec 4
+        description: 'Bi-weekly paycheck on Friday',
+        recurrence: {
+          frequency: 'weekly',
+          interval: 2,
+          dayOfWeek: 5, // Friday
+        },
+      })
+
+      const startDate = LogicalDate.fromString('2025-12-01')
+      const endDate = LogicalDate.fromString('2026-01-31')
+
+      const projections = await adapter.getProjections(TEST_USER_ID, {
+        accountId: savingsAccountId,
+        startDate,
+        endDate,
+      })
+
+      // Verify the first occurrence is adjusted to Friday (Dec 5), not Thursday (Dec 4)
+      const dec4 = projections.find(p => p.date.toString() === '2025-12-04')
+      const dec5 = projections.find(p => p.date.toString() === '2025-12-05')
+      const dec6 = projections.find(p => p.date.toString() === '2025-12-06')
+      const dec18 = projections.find(p => p.date.toString() === '2025-12-18')
+      const dec19 = projections.find(p => p.date.toString() === '2025-12-19')
+      const dec20 = projections.find(p => p.date.toString() === '2025-12-20')
+      const jan1 = projections.find(p => p.date.toString() === '2026-01-01')
+      const jan2 = projections.find(p => p.date.toString() === '2026-01-02')
+      const jan3 = projections.find(p => p.date.toString() === '2026-01-03')
+
+      // If Dec 4 exists, it should have no change from initial balance (transaction starts on Dec 4 but adjusts to Dec 5)
+      if (dec4) {
+        expect(dec4.balance).toBe(5000) // Initial balance, no transaction yet
+      }
+      
+      // Dec 5 (Friday) should have the first payment (adjusted from Dec 4)
+      expect(dec5).toBeDefined()
+      expect(dec5!.balance).toBe(14000) // 5000 + 9000
+      
+      // Dec 6 should maintain the balance
+      if (dec6) {
+        expect(dec6!.balance).toBe(14000) // Same as Dec 5
+      }
+      
+      // Dec 18 (Thursday) should have no change (before next payment)
+      if (dec18) {
+        expect(dec18!.balance).toBe(14000) // Same as Dec 5
+      }
+      
+      // Dec 19 (Friday) should have the second payment (14 days after Dec 5)
+      expect(dec19).toBeDefined()
+      expect(dec19!.balance).toBe(23000) // 14000 + 9000
+      
+      // Dec 20 should maintain the balance
+      if (dec20) {
+        expect(dec20!.balance).toBe(23000) // Same as Dec 19
+      }
+      
+      // Jan 1 (Wednesday) should have no change (before next payment)
+      if (jan1) {
+        expect(jan1!.balance).toBe(23000) // Same as Dec 19
+      }
+      
+      // Jan 2 (Friday) should have the third payment (14 days after Dec 19)
+      expect(jan2).toBeDefined()
+      expect(jan2!.balance).toBe(32000) // 23000 + 9000
+      
+      // Jan 3 should maintain the balance
+      if (jan3) {
+        expect(jan3!.balance).toBe(32000) // Same as Jan 2
+      }
+      
+      // Verify that the transaction occurs on Fridays, not Thursdays
+      // The key assertion: Dec 5 (Friday) should have the payment, not Dec 4 (Thursday)
+      expect(dec5!.balance).toBeGreaterThan(5000)
+      if (dec4) {
+        expect(dec4.balance).toBeLessThan(dec5!.balance)
+      }
+    })
+
     it('should materialize bi-weekly recurring transactions', async () => {
       // Bi-weekly payment (every 2 weeks) starting Jan 1
       await adapter.createTransaction(TEST_USER_ID, {

@@ -436,6 +436,20 @@ export class PrismaDataAdapter implements DataAdapter {
     const { frequency, interval = 1, dayOfWeek, dayOfMonth, endDate: recEndDate, occurrences: maxOccurrences } = tx.recurrence
 
     let currentDate = tx.date
+    
+    // For weekly recurrences with dayOfWeek, adjust the start date to the correct day of week
+    if (frequency === 'weekly' && dayOfWeek !== undefined && dayOfWeek !== null) {
+      const startDayOfWeek = currentDate.dayOfWeek
+      if (startDayOfWeek !== dayOfWeek) {
+        // Find the next occurrence of the target day of week
+        let daysToAdd = dayOfWeek - startDayOfWeek
+        if (daysToAdd < 0) {
+          daysToAdd += 7
+        }
+        currentDate = currentDate.addDays(daysToAdd)
+      }
+    }
+    
     const recurrenceEnd = recEndDate ? recEndDate : endDate
     const effectiveEnd = recurrenceEnd.compare(endDate) <= 0 
       ? recurrenceEnd 
@@ -460,7 +474,21 @@ export class PrismaDataAdapter implements DataAdapter {
           currentDate = currentDate.addDays(interval)
           break
         case 'weekly':
+          // Add the interval weeks
           currentDate = currentDate.addDays(7 * interval)
+          // If dayOfWeek is specified, adjust to that day of week
+          if (dayOfWeek !== undefined && dayOfWeek !== null) {
+            const currentDayOfWeek = currentDate.dayOfWeek
+            let daysToAdd = dayOfWeek - currentDayOfWeek
+            // If the target day is earlier in the week, add 7 days to wrap around
+            if (daysToAdd < 0) {
+              daysToAdd += 7
+            }
+            // If daysToAdd is 0, we're already on the correct day
+            if (daysToAdd > 0) {
+              currentDate = currentDate.addDays(daysToAdd)
+            }
+          }
           break
         case 'monthly':
           currentDate = currentDate.addMonths(interval)

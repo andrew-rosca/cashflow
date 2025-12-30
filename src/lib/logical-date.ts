@@ -26,6 +26,24 @@ export class LogicalDate {
   }
 
   /**
+   * Get today's date as a LogicalDate using UTC
+   * This should be used for logical comparisons with server dates (which are timezone-agnostic)
+   * 
+   * Server dates are stored as YYYY-MM-DD strings without timezone, so we use UTC
+   * to get a consistent "today" for comparisons regardless of the user's timezone.
+   */
+  static today(): LogicalDate {
+    const now = new Date()
+    // Use UTC methods to get today's date in UTC
+    // This ensures consistent comparisons with server dates
+    return LogicalDate.from(
+      now.getUTCFullYear(),
+      now.getUTCMonth() + 1,
+      now.getUTCDate()
+    )
+  }
+
+  /**
    * Create a LogicalDate from a string (YYYY-MM-DD)
    */
   static fromString(dateString: string): LogicalDate {
@@ -240,12 +258,14 @@ export function requireLogicalDate(input: string | LogicalDate | undefined): Log
 }
 
 /**
- * Get today's date as a LogicalDate
- * This is the ONLY place where Date is used - to get the current calendar date
- * The Date object is immediately converted to LogicalDate to avoid timezone issues
+ * Get today's date as a LogicalDate using local timezone
+ * This should be used ONLY for UI defaults (e.g., default date in date picker)
+ * 
+ * For logical comparisons with server dates, use LogicalDate.today() instead.
  */
 export function today(): LogicalDate {
-  // Use Date only to get today's calendar date (client-side only)
+  // Use local timezone methods for UI defaults
+  // This gives users their local "today" when entering dates
   const now = new Date()
   return LogicalDate.from(now.getFullYear(), now.getMonth() + 1, now.getDate())
 }

@@ -140,7 +140,8 @@ export default function Home() {
 
   const loadTransactions = async () => {
     try {
-      const today = getToday()
+      // Use UTC-based today for logical comparisons with server dates
+      const today = LogicalDate.today()
       // Load transactions from the earliest account balance date to 365 days in the future
       // This ensures we include all transactions that affect projections
       const earliestBalanceAsOf = accounts.length > 0
@@ -171,7 +172,8 @@ export default function Home() {
 
   const loadProjections = async () => {
     try {
-      const today = getToday()
+      // Use UTC-based today for logical comparisons with server dates
+      const today = LogicalDate.today()
       const endDate = today.addDays(90)
       
       if (accounts.length === 0) {
@@ -705,8 +707,21 @@ export default function Home() {
   const isRecurringOccurrenceOnDate = (tx: Transaction, targetDate: LogicalDate): boolean => {
     if (!tx.recurrence) return false
 
-    const { frequency, interval = 1, dayOfMonth, endDate } = tx.recurrence
-    const startDate = LogicalDate.fromString(tx.date)
+    const { frequency, interval = 1, dayOfWeek, dayOfMonth, endDate } = tx.recurrence
+    let startDate = LogicalDate.fromString(tx.date)
+    
+    // For weekly recurrences with dayOfWeek, adjust the start date to the correct day of week
+    if (frequency === 'weekly' && dayOfWeek !== undefined && dayOfWeek !== null) {
+      const startDayOfWeek = startDate.dayOfWeek
+      if (startDayOfWeek !== dayOfWeek) {
+        // Find the next occurrence of the target day of week
+        let daysToAdd = dayOfWeek - startDayOfWeek
+        if (daysToAdd < 0) {
+          daysToAdd += 7
+        }
+        startDate = startDate.addDays(daysToAdd)
+      }
+    }
     
     // Check if target date is before start date
     if (targetDate.compare(startDate) < 0) return false
@@ -738,7 +753,21 @@ export default function Home() {
           currentDate = currentDate.addDays(interval)
           break
         case 'weekly':
+          // Add the interval weeks
           currentDate = currentDate.addDays(7 * interval)
+          // If dayOfWeek is specified, adjust to that day of week
+          if (dayOfWeek !== undefined && dayOfWeek !== null) {
+            const currentDayOfWeek = currentDate.dayOfWeek
+            let daysToAdd = dayOfWeek - currentDayOfWeek
+            // If the target day is earlier in the week, add 7 days to wrap around
+            if (daysToAdd < 0) {
+              daysToAdd += 7
+            }
+            // If daysToAdd is 0, we're already on the correct day
+            if (daysToAdd > 0) {
+              currentDate = currentDate.addDays(daysToAdd)
+            }
+          }
           break
         case 'monthly':
           currentDate = currentDate.addMonths(interval)
@@ -828,12 +857,80 @@ export default function Home() {
   const getNextOccurrenceDate = (tx: Transaction): LogicalDate => {
     if (!tx.recurrence) return LogicalDate.fromString(tx.date)
     
-    const today = getToday()
+    // Use UTC-based today for logical comparisons with server dates
+    const today = LogicalDate.today()
     const { frequency, interval = 1, dayOfWeek, dayOfMonth, endDate } = tx.recurrence
     let currentDate = LogicalDate.fromString(tx.date)
     
-    // If the start date is in the future, that's the next occurrence
-    if (currentDate.compare(today) > 0) {
+    // For weekly recurrences with dayOfWeek, adjust the start date to the correct day of week
+    if (frequency === 'weekly' && dayOfWeek !== undefined && dayOfWeek !== null) {
+      const startDayOfWeek = currentDate.dayOfWeek
+      if (startDayOfWeek !== dayOfWeek) {
+        // Find the next occurrence of the target day of week
+        let daysToAdd = dayOfWeek - startDayOfWeek
+        if (daysToAdd < 0) {
+          daysToAdd += 7
+        }
+        currentDate = currentDate.addDays(daysToAdd)
+      }
+    }
+    
+    
+    // For monthly recurring with dayOfMonth, we need special handling:
+    // The dayOfMonth should be used for all occurrences, not the base date's day
+    if (frequency === 'monthly' && dayOfMonth !== undefined && dayOfMonth !== null) {
+      // First, check if the dayOfMonth in the base month is still in the future
+      const baseYear = currentDate.year
+      const baseMonth = currentDate.month
+      const daysInBaseMonth = LogicalDate.from(baseYear, baseMonth, 1).daysInMonth
+      const targetDayInBaseMonth = Math.min(dayOfMonth, daysInBaseMonth)
+      let occurrenceDate = LogicalDate.from(baseYear, baseMonth, targetDayInBaseMonth)
+      
+      // If the occurrence in the base month is in the future, use it
+      if (occurrenceDate.compare(today) > 0) {
+        // Check end date
+        if (endDate) {
+          const endDateObj = LogicalDate.fromString(endDate)
+          if (occurrenceDate.compare(endDateObj) > 0) {
+            return LogicalDate.fromString(tx.date)
+          }
+        }
+        return occurrenceDate
+      }
+      
+      // Otherwise, find the next month where dayOfMonth is in the future
+      currentDate = currentDate.addMonths(interval)
+      let iterations = 0
+      const maxIterations = 10000
+      
+      while (iterations < maxIterations) {
+        const daysInMonth = currentDate.daysInMonth
+        const targetDay = Math.min(dayOfMonth, daysInMonth)
+        occurrenceDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+        
+        // Check if this occurrence is in the future
+        if (occurrenceDate.compare(today) > 0) {
+          // Check end date
+          if (endDate) {
+            const endDateObj = LogicalDate.fromString(endDate)
+            if (occurrenceDate.compare(endDateObj) > 0) {
+              return LogicalDate.fromString(tx.date)
+            }
+          }
+          return occurrenceDate
+        }
+        
+        // Advance to next month
+        currentDate = currentDate.addMonths(interval)
+        iterations++
+      }
+      
+      // Fallback
+      return LogicalDate.fromString(tx.date)
+    }
+    
+    // If the start date is today or in the future, that's the next occurrence
+    if (currentDate.compare(today) >= 0) {
       return currentDate
     }
     
@@ -841,7 +938,7 @@ export default function Home() {
     let iterations = 0
     const maxIterations = 10000 // Safety check to prevent infinite loops
     
-    while (currentDate.compare(today) <= 0 && iterations < maxIterations) {
+    while (currentDate.compare(today) < 0 && iterations < maxIterations) {
       iterations++
       
       switch (frequency) {
