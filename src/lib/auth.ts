@@ -19,8 +19,17 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async session({ session, user }) {
+      // With database sessions, user is provided
       if (session.user && user) {
         session.user.id = user.id
+      }
+      // If user is not provided (JWT strategy), try to get it from the session token
+      else if (session.user && !session.user.id) {
+        // The adapter should have already populated this, but just in case
+        const userId = (session as any).userId
+        if (userId) {
+          session.user.id = userId
+        }
       }
       return session
     },
