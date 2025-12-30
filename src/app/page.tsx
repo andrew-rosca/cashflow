@@ -36,6 +36,7 @@ interface ProjectionData {
   accountId: string
   date: string // Calendar date string (YYYY-MM-DD)
   balance: number
+  previousBalance?: number // Balance on the previous day (if available)
 }
 
 export default function Home() {
@@ -192,10 +193,13 @@ export default function Home() {
         return balanceAsOf.toISOString().slice(0, 10)
       }
 
-      const startDate = accounts.reduce((earliest, account) => {
+      const earliestBalanceAsOf = accounts.reduce((earliest, account) => {
         const balanceAsOf = LogicalDate.fromString(balanceAsOfToDateString(account.balanceAsOf))
         return earliest.compare(balanceAsOf) > 0 ? balanceAsOf : earliest
       }, LogicalDate.fromString(balanceAsOfToDateString(accounts[0].balanceAsOf)))
+      
+      // Start from 1 day before the earliest balanceAsOf to enable comparison for arrows
+      const startDate = earliestBalanceAsOf.addDays(-1)
 
       // Get projections for all accounts
       const allProjections: ProjectionData[] = []
@@ -640,6 +644,18 @@ export default function Home() {
     return projection ? projection.balance : null
   }
 
+  // Get the previous balance for an account from projection data
+  const getPreviousBalance = (accountId: string, date: LogicalDate): number | null => {
+    const dateStr = date instanceof LogicalDate ? date.toString() : date
+    const projection = projections.find(
+      p => {
+        // API returns date as string (YYYY-MM-DD)
+        return p.accountId === accountId && p.date === dateStr
+      }
+    )
+    return projection?.previousBalance ?? null
+  }
+
   // Get all unique dates from projections
   const getAllProjectionDates = (): LogicalDate[] => {
     const dateSet = new Set<string>()
@@ -1065,12 +1081,14 @@ export default function Home() {
                           className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-blue-500 rounded px-1 text-right w-24"
                         />
                       ) : (
-                        <span 
-                          className="text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded text-right text-gray-900 dark:text-gray-100"
-                          onClick={() => handleCellClick(`account-balance-${account.id}`, account.initialBalance.toString())}
-                        >
-                          {formatNumber(account.initialBalance)}
-                        </span>
+                        <div className="flex items-center gap-1 justify-end">
+                          <span 
+                            className="text-sm font-mono cursor-text hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded text-right text-gray-900 dark:text-gray-100"
+                            onClick={() => handleCellClick(`account-balance-${account.id}`, account.initialBalance.toString())}
+                          >
+                            {formatNumber(account.initialBalance)}
+                          </span>
+                        </div>
                       )}
                     </div>
                   )
@@ -1278,15 +1296,37 @@ export default function Home() {
                           </td>
                           {accounts.map(account => {
                             const balance = getProjectedBalance(account.id, date)
+                            const projection = projections.find(
+                              p => p.accountId === account.id && p.date === dateStr
+                            )
+                            const previousBalance = projection?.previousBalance
+                            
                             return (
                               <td
                                 key={account.id}
                                 className="py-2 px-4 text-right font-mono whitespace-nowrap"
                               >
                                 {balance !== null ? (
-                                  <span className="text-gray-900 dark:text-gray-100">
-                                    {formatNumber(balance)}
-                                  </span>
+                                  <div className="flex items-center justify-end gap-1">
+                                    <span className="text-gray-900 dark:text-gray-100">
+                                      {formatNumber(balance)}
+                                    </span>
+                                    <span 
+                                      className={`inline-flex items-center text-sm ${
+                                        previousBalance !== undefined && previousBalance !== null && balance !== previousBalance
+                                          ? (balance > previousBalance ? 'text-green-600/80 dark:text-green-400/80' : 'text-red-600/80 dark:text-red-400/80')
+                                          : 'text-transparent'
+                                      }`}
+                                      title={previousBalance !== undefined && previousBalance !== null && balance !== previousBalance 
+                                        ? (balance > previousBalance ? `Increased from ${formatNumber(previousBalance)}` : `Decreased from ${formatNumber(previousBalance)}`)
+                                        : ''}
+                                    >
+                                      {previousBalance !== undefined && previousBalance !== null && balance !== previousBalance 
+                                        ? (balance > previousBalance ? '↑' : '↓')
+                                        : '↑' // Invisible placeholder for alignment
+                                      }
+                                    </span>
+                                  </div>
                                 ) : (
                                   <span className="text-gray-400 dark:text-gray-600">—</span>
                                 )}
@@ -1298,10 +1338,6 @@ export default function Home() {
                           <>
                             {accounts.map(account => {
                               const accountTransactions = getTransactionsForAccountOnDate(account.id, date)
-                              // Debug: log if no transactions found
-                              if (accountTransactions.length === 0 && transactions.length > 0) {
-                                console.log(`[DEBUG] No transactions found for account ${account.id} on date ${dateStr}. Total transactions: ${transactions.length}`)
-                              }
                               if (accountTransactions.length === 0) return null
                               
                               return accountTransactions.map(({ transaction, amount }) => (

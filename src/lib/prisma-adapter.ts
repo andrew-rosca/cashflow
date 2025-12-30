@@ -398,8 +398,14 @@ export class PrismaDataAdapter implements DataAdapter {
         : startDate
 
       let currentDate = startProjectionDate
+      let previousBalance: number | undefined = undefined
 
       while (currentDate.compare(endDate) <= 0) {
+        // Store the balance at the start of this date (before applying events)
+        // For the first date (balanceAsOf), this is the initialBalance
+        // For subsequent dates, this is the balance at the end of the previous day
+        const balanceAtStartOfDate = currentBalance
+
         // Apply all events for this account on this date
         const dateEvents = events.filter(e => {
           if (e.accountId !== account.id) return false
@@ -410,12 +416,23 @@ export class PrismaDataAdapter implements DataAdapter {
           currentBalance += event.amount
         }
 
-        // Record the balance for this date
+        // For the first date (balanceAsOf), previousBalance should be the balance before events
+        // For subsequent dates, previousBalance is the balance at the end of the previous day
+        const effectivePreviousBalance = previousBalance !== undefined 
+          ? previousBalance 
+          : balanceAtStartOfDate // Use initial balance for first date
+
+        // Record the balance for this date, including previous balance
         projections.push({
           accountId: account.id,
           date: currentDate,
           balance: currentBalance,
+          previousBalance: effectivePreviousBalance,
         })
+
+        // Update previousBalance for the next iteration
+        // This is the balance at the END of currentDate (after applying events)
+        previousBalance = currentBalance
 
         // Move to next day
         currentDate = currentDate.addDays(1)

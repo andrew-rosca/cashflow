@@ -44,6 +44,7 @@ export interface ProjectionData {
   accountId: string
   date: LogicalDate
   balance: number
+  previousBalance?: number // Balance on the previous day (if available)
 }
 
 export interface DataAdapter {
