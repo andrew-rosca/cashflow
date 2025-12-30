@@ -1159,11 +1159,20 @@ export default function Home() {
                   {projectionDates.map((date, idx) => {
                     const dateStr = date.toString()
                     const isExpanded = expandedRows.has(dateStr)
+                    // Check if any account has a negative balance on this date
+                    const hasNegativeBalance = accounts.some(account => {
+                      const balance = getProjectedBalance(account.id, date)
+                      return balance !== null && balance < 0
+                    })
                     return (
                       <React.Fragment key={dateStr}>
                         <tr
                           className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${
-                            idx % 5 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''
+                            hasNegativeBalance 
+                              ? 'bg-orange-100/60 dark:bg-orange-900/30' 
+                              : idx % 5 === 0 
+                                ? 'bg-gray-50 dark:bg-gray-900/50' 
+                                : ''
                           }`}
                           onClick={() => toggleRowExpansion(date)}
                         >
@@ -1199,7 +1208,15 @@ export default function Home() {
                               if (accountTransactions.length === 0) return null
                               
                               return accountTransactions.map(({ transaction, amount }) => (
-                                <tr key={`${account.id}-${transaction.id}`} className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30" data-expanded-row="true">
+                                <tr 
+                                  key={`${account.id}-${transaction.id}`} 
+                                  className={`border-b border-gray-100 dark:border-gray-800 ${
+                                    hasNegativeBalance 
+                                      ? 'bg-orange-100/50 dark:bg-orange-900/40' 
+                                      : 'bg-gray-50/40 dark:bg-gray-800/30'
+                                  }`} 
+                                  data-expanded-row="true"
+                                >
                                   <td className="py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px]">
                                     <div className="flex items-center gap-1 pl-6 text-xs">
                                       {transaction.recurrence ? (
