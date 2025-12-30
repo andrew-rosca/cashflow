@@ -75,6 +75,8 @@ function LoginForm() {
               Sign in with Google
             </button>
 
+            {/* Apple Sign-In - Hidden for now (requires paid Apple Developer Program membership) */}
+            {/* Uncomment when Apple OAuth is configured:
             <button
               onClick={() => handleSignIn('apple')}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
@@ -84,15 +86,8 @@ function LoginForm() {
               </svg>
               Sign in with Apple
             </button>
+            */}
           </div>
-
-          {(!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && !process.env.NEXT_PUBLIC_APPLE_ID) && (
-            <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>Note:</strong> OAuth providers are not configured. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APPLE_ID, and APPLE_SECRET in your environment variables.
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
