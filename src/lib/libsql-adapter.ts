@@ -51,7 +51,7 @@ export function LibSQLAdapter(): Adapter {
 
       await client.execute({
         sql: `
-          INSERT INTO "User" (id, email, emailVerified, name, image, "createdAt", "updatedAt")
+          INSERT INTO "User" (id, email, "emailVerified", name, image, "createdAt", "updatedAt")
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
@@ -71,7 +71,7 @@ export function LibSQLAdapter(): Adapter {
       }
     },
 
-    async getUser(id: string) {
+    async getUser(id: string): Promise<AdapterUser | null> {
       const client = getLibSQLClient()
       const result = await client.execute({
         sql: 'SELECT * FROM "User" WHERE id = ?',
@@ -132,10 +132,13 @@ export function LibSQLAdapter(): Adapter {
       }
     },
 
-    async updateUser(user: Partial<AdapterUser> & { id: string }) {
+    async updateUser(user: Partial<AdapterUser> & Pick<AdapterUser, "id">) {
       const client = getLibSQLClient()
       const now = new Date()
 
+      // Pick<AdapterUser, "id"> guarantees id exists, but TypeScript doesn't narrow Partial<> correctly
+      // Pick<AdapterUser, "id"> guarantees id exists, use non-null assertion
+      const userId: string = user.id!
       const updates: string[] = []
       const args: any[] = []
 
@@ -158,14 +161,16 @@ export function LibSQLAdapter(): Adapter {
 
       updates.push('"updatedAt" = ?')
       args.push(now.toISOString())
-      args.push(user.id)
+      args.push(userId)
 
       await client.execute({
         sql: `UPDATE "User" SET ${updates.join(', ')} WHERE id = ?`,
         args,
       })
 
-      const updated = await this.getUser(user.id)
+      // userId is typed as string above, but TypeScript doesn't narrow Partial<> correctly
+      // Use non-null assertion to satisfy the type checker
+      const updated = await this.getUser(userId!)
       if (!updated) throw new Error('User not found after update')
       return updated
     },
@@ -349,4 +354,3 @@ export function LibSQLAdapter(): Adapter {
     },
   }
 }
-
