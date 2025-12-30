@@ -11,7 +11,7 @@
         "Changes save on blur or Enter key press",
         "ESC key cancels editing"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F101",
@@ -25,7 +25,7 @@
         "ESC key cancels editing",
         "Amount displays without currency symbols (e.g., 2500.00)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F102",
@@ -39,7 +39,7 @@
         "Changes persist when dialog is closed",
         "Account is removed from list when deleted"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F103",
@@ -52,7 +52,7 @@
         "New account appears in the list immediately",
         "New account has default values (name, balance, date)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F104",
@@ -65,7 +65,7 @@
         "Changes save on blur or Enter key press",
         "ESC key cancels editing"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F105",
@@ -79,7 +79,7 @@
         "ESC key cancels editing",
         "Amount displays without currency symbols"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F106",
@@ -92,7 +92,7 @@
         "Changes save on blur or Enter key press",
         "ESC key cancels editing"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F107",
@@ -105,7 +105,7 @@
         "Recurring transactions show icon, date, description, and amount inline",
         "Layout is compact and spreadsheet-like"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F108",
@@ -118,7 +118,7 @@
         "User can edit date, amount, description, account, and recurrence pattern",
         "Changes persist when dialog is submitted"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F109",
@@ -132,7 +132,7 @@
         "When recurring checkbox is checked, additional fields appear (frequency, end date)",
         "New transaction is created when dialog is submitted"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F110",
@@ -145,7 +145,7 @@
         "Positive balances display in default color",
         "All amounts display without currency symbols"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F111",
@@ -159,7 +159,7 @@
         "Negative amounts display in red",
         "All amounts display without currency symbols"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F112",
@@ -173,7 +173,7 @@
         "All amounts display without currency symbols",
         "Table updates when accounts or transactions change"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F113",
@@ -186,7 +186,7 @@
         "Cursor changes to pointer for clickable elements",
         "Cursor changes to text cursor for editable text"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F114",
@@ -199,7 +199,7 @@
         "Dialog prevents interaction with background content",
         "Cancel button closes dialog without saving changes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F001",
@@ -626,7 +626,7 @@
         "Protected routes redirect to login",
         "User data is accessible in API routes"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F036",
@@ -652,7 +652,7 @@
         "User can authenticate with Google account",
         "User profile is created/updated on successful auth"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F038",
@@ -665,7 +665,7 @@
         "User B cannot see or access user A's data",
         "API returns 404 or 403 for unauthorized access"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F039",
@@ -1108,6 +1108,70 @@
         "Use notes to categorize expenses (e.g., 'Rent', 'Groceries') when using generic external accounts"
       ],
       "passes": false
+    },
+    {
+      "id": "F086",
+      "category": "ui",
+      "priority": 1,
+      "description": "Settings dialog with sign out functionality",
+      "steps": [
+        "Settings icon appears below left sidebar panels",
+        "Clicking settings icon opens settings dialog",
+        "Settings dialog includes sign out button",
+        "Sign out button logs user out and redirects to login page"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F087",
+      "category": "ui",
+      "priority": 1,
+      "description": "Projection table row expansion with transaction details",
+      "steps": [
+        "Clicking on a projection table row expands to show transactions",
+        "Expanded view shows transaction icon, description, and amount",
+        "Expanded rows have distinct background color",
+        "Transaction details are displayed in respective account columns"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F088",
+      "category": "ui",
+      "priority": 1,
+      "description": "Negative balance highlighting in projection table",
+      "steps": [
+        "Rows with negative balances are highlighted in orange",
+        "Highlighting applies to both main rows and expanded transaction rows",
+        "Multiple accounts can have negative balances on same date"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F089",
+      "category": "ui",
+      "priority": 1,
+      "description": "Balance change indicators (arrows) in projection table",
+      "steps": [
+        "Green up arrow appears when balance increases",
+        "Red down arrow appears when balance decreases",
+        "Arrows are muted in color and properly sized",
+        "First row has invisible placeholder for alignment"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F090",
+      "category": "ui",
+      "priority": 1,
+      "description": "Transaction tooltips with recurrence information",
+      "steps": [
+        "Hovering over transaction icon shows tooltip",
+        "Tooltip shows account name and transaction type",
+        "For recurring transactions, tooltip shows recurrence pattern",
+        "Tooltip is positioned near cursor"
+      ],
+      "passes": true
     }
   ]
 }
