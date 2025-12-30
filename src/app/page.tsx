@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import DateInput from '@/components/DateInput'
+import Tooltip from '@/components/Tooltip'
 import RecurrenceControl from '@/components/RecurrenceControl'
 import { LogicalDate, today } from '@/lib/logical-date'
 
@@ -581,6 +582,44 @@ export default function Home() {
 
   // Calculate transaction amount for display
   // Display the amount exactly as stored - preserve user's intent
+  // Format tooltip text for transaction icon
+  const getTransactionTooltip = (tx: Transaction): string => {
+    // Get account name - use fromAccount (primary account for the transaction)
+    const account = accounts.find(a => a.id === tx.fromAccountId)
+    const accountName = account?.name || 'Unknown Account'
+    
+    // Debug: uncomment to verify tooltip function is being called
+    // console.log('Generating tooltip for transaction:', tx.id, 'account:', accountName)
+    
+    if (tx.recurrence) {
+      const { frequency, interval = 1, dayOfMonth } = tx.recurrence
+      let pattern = ''
+      
+      switch (frequency) {
+        case 'daily':
+          pattern = interval === 1 ? 'daily' : `every ${interval} days`
+          break
+        case 'weekly':
+          pattern = interval === 1 ? 'weekly' : `every ${interval} weeks`
+          break
+        case 'monthly':
+          if (dayOfMonth) {
+            pattern = interval === 1 ? `monthly on day ${dayOfMonth}` : `every ${interval} months on day ${dayOfMonth}`
+          } else {
+            pattern = interval === 1 ? 'monthly' : `every ${interval} months`
+          }
+          break
+        case 'yearly':
+          pattern = interval === 1 ? 'yearly' : `every ${interval} years`
+          break
+      }
+      
+      return `${accountName}, ${pattern}`
+    } else {
+      return `${accountName}, one-time`
+    }
+  }
+
   const getTransactionAmount = (tx: Transaction): number => {
     // Display the amount as stored - no transformation
     // The sign reflects the user's intent when they entered the transaction
@@ -970,15 +1009,17 @@ export default function Home() {
                   >
                     {tx.recurrence ? (
                       <>
-                        <svg 
-                          className="w-3.5 h-3.5 text-blue-500 cursor-pointer hover:text-blue-600 flex-shrink-0" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                          onClick={() => openTransactionDialog(tx.id)}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
+                        <Tooltip content={accounts.length > 0 ? getTransactionTooltip(tx) : ''}>
+                          <svg 
+                            className="w-3.5 h-3.5 text-blue-500 cursor-pointer hover:text-blue-600 flex-shrink-0" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                            onClick={() => openTransactionDialog(tx.id)}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </Tooltip>
                         <span 
                           className="text-sm text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded whitespace-nowrap flex-shrink-0"
                           onClick={() => openTransactionDialog(tx.id)}
@@ -1024,15 +1065,17 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <svg 
-                          className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                          onClick={() => openTransactionDialog(tx.id)}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <Tooltip content={accounts.length > 0 ? getTransactionTooltip(tx) : ''}>
+                          <svg 
+                            className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                            onClick={() => openTransactionDialog(tx.id)}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </Tooltip>
                         {editingCell === `tx-date-${tx.id}` ? (
                           <DateInput
                             value={editValue ? LogicalDate.fromString(editValue) : LogicalDate.fromString(tx.date)}
@@ -1160,23 +1203,27 @@ export default function Home() {
                                   <td className="py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px]">
                                     <div className="flex items-center gap-1 pl-6 text-xs">
                                       {transaction.recurrence ? (
-                                        <svg 
-                                          className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" 
-                                          fill="none" 
-                                          stroke="currentColor" 
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
+                                        <Tooltip content={accounts.length > 0 ? getTransactionTooltip(transaction) : ''}>
+                                          <svg 
+                                            className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" 
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                          </svg>
+                                        </Tooltip>
                                       ) : (
-                                        <svg 
-                                          className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" 
-                                          fill="none" 
-                                          stroke="currentColor" 
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
+                                        <Tooltip content={accounts.length > 0 ? getTransactionTooltip(transaction) : ''}>
+                                          <svg 
+                                            className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" 
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                          </svg>
+                                        </Tooltip>
                                       )}
                                       <span className="text-gray-500 dark:text-gray-400">
                                         {transaction.description || <span className="text-gray-400 dark:text-gray-500">—</span>}
