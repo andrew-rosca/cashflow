@@ -19,8 +19,8 @@ export const test = base.extend<TestFixtures>({
   // Test server fixture - starts before each test suite
   testServer: async ({ }, use, testInfo) => {
     // Use a unique port for each worker to allow parallel test execution
-    // Base port 3000 + worker index (0, 1, 2, ...)
-    const port = 3000 + testInfo.parallelIndex
+    // Base port 4000 + worker index (0, 1, 2, ...) to avoid conflicts with dev server on 3000
+    const port = 4000 + testInfo.parallelIndex
     const server = await startTestServer(port)
     try {
       await use(server)
