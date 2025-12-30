@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import DateInput from '@/components/DateInput'
 import RecurrenceControl from '@/components/RecurrenceControl'
 import { LogicalDate, today } from '@/lib/logical-date'
@@ -72,12 +72,21 @@ export default function Home() {
   const [rawInputTsv, setRawInputTsv] = useState<string>('')
   const [rawInputLoading, setRawInputLoading] = useState(false)
   const [rawInputError, setRawInputError] = useState<string | null>(null)
+  
+  // Expanded rows state (track by date string)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
-  // Load data
+  // Load accounts first
   useEffect(() => {
     loadAccounts()
-    loadTransactions()
   }, [])
+
+  // Load transactions after accounts are loaded (so we can use earliest balanceAsOf date)
+  useEffect(() => {
+    if (accounts.length > 0) {
+      loadTransactions()
+    }
+  }, [accounts])
 
   // Auto-load transactions when raw input dialog opens
   useEffect(() => {
@@ -131,9 +140,22 @@ export default function Home() {
   const loadTransactions = async () => {
     try {
       const today = getToday()
+      // Load transactions from the earliest account balance date to 365 days in the future
+      // This ensures we include all transactions that affect projections
+      const earliestBalanceAsOf = accounts.length > 0
+        ? accounts.reduce((minDate, account) => {
+            const accountBalanceDate = LogicalDate.fromString(
+              typeof account.balanceAsOf === 'string' 
+                ? account.balanceAsOf.split('T')[0]
+                : account.balanceAsOf.toString().split('T')[0]
+            )
+            return minDate.compare(accountBalanceDate) < 0 ? minDate : accountBalanceDate
+          }, today)
+        : today
       const futureDate = today.addDays(365)
+      const startDate = earliestBalanceAsOf.compare(today) < 0 ? earliestBalanceAsOf : today
       const response = await fetch(
-        `/api/transactions?startDate=${today.toString()}&endDate=${futureDate.toString()}`
+        `/api/transactions?startDate=${startDate.toString()}&endDate=${futureDate.toString()}`
       )
       if (!response.ok) {
         console.error('Failed to load transactions:', response.status, response.statusText)
@@ -626,6 +648,143 @@ export default function Home() {
 
   const projectionDates = getDatesWithBalanceChanges()
 
+  // Toggle row expansion
+  const toggleRowExpansion = (date: LogicalDate) => {
+    const dateStr = date.toString()
+    setExpandedRows(prev => {
+      const next = new Set(prev)
+      if (next.has(dateStr)) {
+        next.delete(dateStr)
+      } else {
+        next.add(dateStr)
+      }
+      return next
+    })
+  }
+
+  // Check if a date matches a recurring transaction occurrence
+  const isRecurringOccurrenceOnDate = (tx: Transaction, targetDate: LogicalDate): boolean => {
+    if (!tx.recurrence) return false
+
+    const { frequency, interval = 1, dayOfMonth, endDate } = tx.recurrence
+    const startDate = LogicalDate.fromString(tx.date)
+    
+    // Check if target date is before start date
+    if (targetDate.compare(startDate) < 0) return false
+    
+    // Check if target date is after end date
+    if (endDate) {
+      const endDateObj = LogicalDate.fromString(endDate)
+      if (targetDate.compare(endDateObj) > 0) return false
+    }
+
+    // Check if target date matches the start date
+    if (targetDate.toString() === startDate.toString()) return true
+
+    // Calculate occurrences to see if target date matches
+    let currentDate = startDate
+    let iterations = 0
+    const maxIterations = 10000
+
+    while (currentDate.compare(targetDate) <= 0 && iterations < maxIterations) {
+      iterations++
+      
+      if (currentDate.toString() === targetDate.toString()) {
+        return true
+      }
+
+      // Calculate next occurrence
+      switch (frequency) {
+        case 'daily':
+          currentDate = currentDate.addDays(interval)
+          break
+        case 'weekly':
+          currentDate = currentDate.addDays(7 * interval)
+          break
+        case 'monthly':
+          currentDate = currentDate.addMonths(interval)
+          if (dayOfMonth !== undefined && dayOfMonth !== null) {
+            const daysInMonth = currentDate.daysInMonth
+            const targetDay = Math.min(dayOfMonth, daysInMonth)
+            currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+          }
+          break
+        case 'yearly':
+          currentDate = currentDate.addYears(interval)
+          break
+      }
+
+      // Check if we've exceeded the end date
+      if (endDate) {
+        const endDateObj = LogicalDate.fromString(endDate)
+        if (currentDate.compare(endDateObj) > 0) break
+      }
+
+      // If we've passed the target date, no match
+      if (currentDate.compare(targetDate) > 0) break
+    }
+
+    return false
+  }
+
+  // Get transactions affecting an account on a specific date
+  const getTransactionsForAccountOnDate = (accountId: string, date: LogicalDate): Array<{ transaction: Transaction; amount: number }> => {
+    const result: Array<{ transaction: Transaction; amount: number }> = []
+    const dateStr = date.toString()
+
+    for (const tx of transactions) {
+      const txDate = LogicalDate.fromString(tx.date)
+      const settlementDays = tx.settlementDays || 0
+      const creditDate = txDate.addDays(settlementDays)
+
+      // For recurring transactions, check if this date matches an occurrence
+      const isOccurrenceOnDate = tx.recurrence ? isRecurringOccurrenceOnDate(tx, date) : false
+      const matchesBaseDate = txDate.toString() === dateStr
+
+      // Check if this transaction affects the account on this date
+      if (tx.fromAccountId === tx.toAccountId) {
+        // Same account transaction - affects on transaction date (or occurrence date for recurring)
+        if ((matchesBaseDate || isOccurrenceOnDate) && (tx.fromAccountId === accountId || tx.toAccountId === accountId)) {
+          result.push({ transaction: tx, amount: tx.amount })
+        }
+      } else {
+        // Different accounts - debit on tx.date, credit on creditDate
+        // For recurring, we need to calculate the occurrence dates
+        if (tx.recurrence) {
+          // For recurring transactions, check if this date matches a debit or credit occurrence
+          if (tx.fromAccountId === accountId && isOccurrenceOnDate) {
+            // Debit (negative) - occurs on the occurrence date
+            const debitAmount = tx.amount < 0 ? tx.amount : -tx.amount
+            result.push({ transaction: tx, amount: debitAmount })
+          }
+          if (tx.toAccountId === accountId) {
+            // Credit occurs on occurrence date + settlement days
+            const creditOccurrenceDate = date.addDays(-settlementDays)
+            if (isRecurringOccurrenceOnDate(tx, creditOccurrenceDate)) {
+              // Credit (positive)
+              const creditAmount = tx.amount < 0 ? -tx.amount : tx.amount
+              result.push({ transaction: tx, amount: creditAmount })
+            }
+          }
+        } else {
+          // One-time transaction
+          if (tx.fromAccountId === accountId && matchesBaseDate) {
+            // Debit (negative)
+            const debitAmount = tx.amount < 0 ? tx.amount : -tx.amount
+            result.push({ transaction: tx, amount: debitAmount })
+          }
+          if (tx.toAccountId === accountId && creditDate.toString() === dateStr) {
+            // Credit (positive)
+            const creditAmount = tx.amount < 0 ? -tx.amount : tx.amount
+            result.push({ transaction: tx, amount: creditAmount })
+          }
+        }
+      }
+    }
+
+    return result
+  }
+
   // Helper function to calculate next occurrence date for recurring transactions
   const getNextOccurrenceDate = (tx: Transaction): LogicalDate => {
     if (!tx.recurrence) return LogicalDate.fromString(tx.date)
@@ -943,12 +1102,12 @@ export default function Home() {
           </div>
 
           {/* Right side - Projection table */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden justify-self-start w-fit max-w-full">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden justify-self-start w-fit max-w-full min-w-[500px]">
             <div className="overflow-x-auto">
-              <table className="w-auto text-sm">
+              <table className="w-full text-sm min-w-[500px]">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                    <th className="text-left py-2 px-4 font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide text-xs whitespace-nowrap">
+                    <th className="text-left py-2 px-4 font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide text-xs whitespace-nowrap min-w-[200px]">
                       Date
                     </th>
                     {accounts.map(account => (
@@ -962,35 +1121,98 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {projectionDates.map((date, idx) => (
-                    <tr
-                      key={date.toString()}
-                      className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-                        idx % 5 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''
-                      }`}
-                    >
-                      <td className="py-2 px-4 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
-                        {formatDate(date)}
-                      </td>
-                      {accounts.map(account => {
-                        const balance = getProjectedBalance(account.id, date)
-                        return (
-                          <td
-                            key={account.id}
-                            className="py-2 px-4 text-right font-mono whitespace-nowrap"
-                          >
-                            {balance !== null ? (
-                              <span className={balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}>
-                                {formatNumber(balance)}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-600">—</span>
-                            )}
+                  {projectionDates.map((date, idx) => {
+                    const dateStr = date.toString()
+                    const isExpanded = expandedRows.has(dateStr)
+                    return (
+                      <React.Fragment key={dateStr}>
+                        <tr
+                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${
+                            idx % 5 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''
+                          }`}
+                          onClick={() => toggleRowExpansion(date)}
+                        >
+                          <td className="py-2 px-4 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap min-w-[200px]">
+                            {formatDate(date)}
                           </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
+                          {accounts.map(account => {
+                            const balance = getProjectedBalance(account.id, date)
+                            return (
+                              <td
+                                key={account.id}
+                                className="py-2 px-4 text-right font-mono whitespace-nowrap"
+                              >
+                                {balance !== null ? (
+                                  <span className={balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}>
+                                    {formatNumber(balance)}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 dark:text-gray-600">—</span>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                        {isExpanded && (
+                          <>
+                            {accounts.map(account => {
+                              const accountTransactions = getTransactionsForAccountOnDate(account.id, date)
+                              // Debug: log if no transactions found
+                              if (accountTransactions.length === 0 && transactions.length > 0) {
+                                console.log(`[DEBUG] No transactions found for account ${account.id} on date ${dateStr}. Total transactions: ${transactions.length}`)
+                              }
+                              if (accountTransactions.length === 0) return null
+                              
+                              return accountTransactions.map(({ transaction, amount }) => (
+                                <tr key={`${account.id}-${transaction.id}`} className="border-b border-gray-100 dark:border-gray-800 bg-blue-50/30 dark:bg-blue-900/20">
+                                  <td className="py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px]">
+                                    <div className="flex items-center gap-1">
+                                      {transaction.recurrence ? (
+                                        <svg 
+                                          className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" 
+                                          fill="none" 
+                                          stroke="currentColor" 
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                      ) : (
+                                        <svg 
+                                          className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" 
+                                          fill="none" 
+                                          stroke="currentColor" 
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                      )}
+                                      <span className="text-gray-500 dark:text-gray-400">
+                                        {transaction.description || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  {accounts.map(acc => (
+                                    <td
+                                      key={acc.id}
+                                      className="py-2 px-4 text-right font-mono whitespace-nowrap"
+                                    >
+                                      {acc.id === account.id ? (
+                                        <span className={`text-gray-500 dark:text-gray-400 ${amount < 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                                          {formatNumber(amount)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-gray-400 dark:text-gray-600">—</span>
+                                      )}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))
+                            })}
+                          </>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
