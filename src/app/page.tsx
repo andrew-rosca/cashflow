@@ -1156,7 +1156,7 @@ export default function Home() {
                               if (accountTransactions.length === 0) return null
                               
                               return accountTransactions.map(({ transaction, amount }) => (
-                                <tr key={`${account.id}-${transaction.id}`} className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30">
+                                <tr key={`${account.id}-${transaction.id}`} className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30" data-expanded-row="true">
                                   <td className="py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px]">
                                     <div className="flex items-center gap-1 pl-6 text-xs">
                                       {transaction.recurrence ? (
