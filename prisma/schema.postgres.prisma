@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  transactions     Transaction[]
+  cashFlowAccounts CashFlowAccount[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model CashFlowAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  initialBalance  Float    @default(0)
+  balanceAsOf     String   // Calendar date (YYYY-MM-DD) when initialBalance was set - no time component
+  externalId      String?  // For future Plaid integration
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionsFrom      Transaction[] @relation("FromAccount")
+  transactionsTo        Transaction[] @relation("ToAccount")
+
+  @@index([userId])
+}
+
+model Transaction {
+  id             String             @id @default(cuid())
+  userId         String
+  amount         Float
+  fromAccountId  String
+  toAccountId    String
+  date           String             // Calendar date (YYYY-MM-DD) - no time component
+  settlementDays Int?
+  description    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromAccount CashFlowAccount @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccount   CashFlowAccount @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: Cascade)
+  recurrence  Recurrence?
+
+  @@index([userId, date])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+}
+
+model Recurrence {
+  id           String    @id @default(cuid())
+  transactionId String   @unique
+  frequency    String   // "daily" | "weekly" | "monthly" | "yearly"
+  interval     Int?
+  dayOfWeek    Int?     // 0-6
+  dayOfMonth   Int?     // 1-31
+  endDate      String?  // Calendar date (YYYY-MM-DD) - no time component
+  occurrences  Int?
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+

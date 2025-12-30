@@ -2,10 +2,11 @@ import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import AppleProvider from 'next-auth/providers/apple'
 import { getServerSession } from 'next-auth'
-import { LibSQLAdapter } from './libsql-adapter'
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
+import { prisma } from './db'
 
 export const authOptions: NextAuthOptions = {
-  adapter: LibSQLAdapter(),
+  adapter: PrismaAdapter(prisma),
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
