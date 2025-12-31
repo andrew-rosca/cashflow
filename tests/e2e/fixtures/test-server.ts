@@ -128,8 +128,49 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
     shell: true,
   })
 
+  // Capture server output for debugging
+  let serverOutput = ''
+  let serverError = ''
+  
+  if (serverProcess.stdout) {
+    serverProcess.stdout.on('data', (data) => {
+      serverOutput += data.toString()
+      // Log server output in CI for debugging
+      if (process.env.CI) {
+        console.log(`[Server ${port} stdout]:`, data.toString().trim())
+      }
+    })
+  }
+  
+  if (serverProcess.stderr) {
+    serverProcess.stderr.on('data', (data) => {
+      serverError += data.toString()
+      // Log server errors
+      console.error(`[Server ${port} stderr]:`, data.toString().trim())
+    })
+  }
+  
+  // Check if process exits early
+  serverProcess.on('exit', (code, signal) => {
+    if (code !== null && code !== 0) {
+      console.error(`[Server ${port}] Process exited with code ${code}`)
+      console.error(`[Server ${port}] Output:`, serverOutput)
+      console.error(`[Server ${port}] Errors:`, serverError)
+    }
+  })
+
   // Wait for server to be ready (allow up to 60 seconds in CI)
-  await waitForServer(baseUrl, 60000)
+  try {
+    await waitForServer(baseUrl, 60000)
+  } catch (error) {
+    // If server failed to start, log output and rethrow
+    console.error(`[Server ${port}] Failed to start. Output:`, serverOutput)
+    console.error(`[Server ${port}] Errors:`, serverError)
+    if (serverProcess && !serverProcess.killed) {
+      serverProcess.kill('SIGTERM')
+    }
+    throw error
+  }
 
   const server: TestServer = {
     baseUrl,
