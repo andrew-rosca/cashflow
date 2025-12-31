@@ -30,191 +30,198 @@ if (isPostgres) {
   const maskedUrl = dbUrl.replace(/:[^:@]+@/, ':****@');
   console.log('   Database:', maskedUrl.split('@')[1] || 'configured');
   
-  // Use async IIFE to handle async operations
-  (async () => {
+  // Prepare database URL for migration (direct connection, not pooler)
+  let dbUrlForMigration = dbUrl;
+  
+  if (dbUrl.includes('pooler.supabase.com') || dbUrl.includes(':6543') || dbUrl.includes('pgbouncer=true')) {
+    console.log('   Detected Supabase pooler - switching to direct connection for migrations...');
+    
+    if (process.env.POSTGRES_URL_NON_POOLING) {
+      console.log('   Using POSTGRES_URL_NON_POOLING for migrations...');
+      dbUrlForMigration = process.env.POSTGRES_URL_NON_POOLING;
+      if (dbUrlForMigration.startsWith('postgres://')) {
+        dbUrlForMigration = dbUrlForMigration.replace('postgres://', 'postgresql://');
+      }
+    } else {
+      console.log('   Converting pooler URL to direct connection (port 5432)...');
+      dbUrlForMigration = dbUrl
+        .replace(':6543', ':5432')
+        .replace(/[?&]pgbouncer=true/, '')
+        .replace(/[?&]pgbouncer=1/, '')
+        .replace(/[?&]supa=base-pooler[^&]*/, '');
+      if (dbUrlForMigration.startsWith('postgres://')) {
+        dbUrlForMigration = dbUrlForMigration.replace('postgres://', 'postgresql://');
+      }
+    }
+  }
+  
+  // Ensure DATABASE_URL has connection timeout
+  if (!dbUrlForMigration.includes('connect_timeout')) {
+    const separator = dbUrlForMigration.includes('?') ? '&' : '?';
+    dbUrlForMigration = `${dbUrlForMigration}${separator}connect_timeout=10`;
+  }
+  
+  const startTime = Date.now();
+  
+  try {
+    // Try to deploy migrations
+    console.log('   Running: prisma migrate deploy');
+    console.log('   This may take a moment to connect to the database...');
+    
+    let migrationOutput = '';
+    let migrationSucceeded = false;
+    
     try {
-      // Run migration with timeout (2 minutes should be plenty for a single migration)
-      // Use direct prisma command (prisma is in node_modules/.bin after npm install)
-      console.log('   Running: prisma migrate deploy');
-      console.log('   This may take a moment to connect to the database...');
+      migrationOutput = execSync('prisma migrate deploy', { 
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          DATABASE_URL: dbUrlForMigration,
+        },
+        timeout: 2 * 60 * 1000,
+        maxBuffer: 10 * 1024 * 1024,
+        encoding: 'utf8',
+      }).toString();
       
-      // For Supabase, migrations need a direct connection (not pgBouncer)
-      // pgBouncer (port 6543) doesn't support DDL operations like migrations
-      let dbUrlForMigration = dbUrl;
+      console.log(migrationOutput);
+      migrationSucceeded = true;
+    } catch (migrateError) {
+      const stdout = migrateError.stdout?.toString() || '';
+      const stderr = migrateError.stderr?.toString() || '';
+      const errorOutput = stdout + stderr + (migrateError.message || '');
       
-      // For Supabase, migrations need a direct connection (not pgBouncer)
-      // pgBouncer (port 6543) doesn't support DDL operations like migrations
-      if (dbUrl.includes('pooler.supabase.com') || dbUrl.includes(':6543') || dbUrl.includes('pgbouncer=true')) {
-        console.log('   Detected Supabase pooler - switching to direct connection for migrations...');
+      if (stdout) console.log(stdout);
+      if (stderr) console.error(stderr);
+      
+      const isP3005 = errorOutput.includes('P3005') || 
+                      errorOutput.includes('database schema is not empty') ||
+                      errorOutput.includes('schema is not empty');
+      
+      if (isP3005) {
+        console.log('   Database schema exists but migration history is missing.');
+        console.log('   Applying migration SQL, then baselining...');
         
-        // Use POSTGRES_URL_NON_POOLING if available (Supabase provides this)
-        // Even if it says "pooler" in the host, port 5432 is the direct connection
-        if (process.env.POSTGRES_URL_NON_POOLING) {
-          console.log('   Using POSTGRES_URL_NON_POOLING for migrations...');
-          dbUrlForMigration = process.env.POSTGRES_URL_NON_POOLING;
-          // Ensure it uses postgresql:// protocol (not postgres://)
-          if (dbUrlForMigration.startsWith('postgres://')) {
-            dbUrlForMigration = dbUrlForMigration.replace('postgres://', 'postgresql://');
-          }
-        } else {
-          // Fallback: change port from 6543 to 5432 (same host, different port)
-          // Supabase uses the same hostname for both pooler and direct connections
-          console.log('   Converting pooler URL to direct connection (port 5432)...');
-          dbUrlForMigration = dbUrl
-            .replace(':6543', ':5432')
-            .replace(/[?&]pgbouncer=true/, '')
-            .replace(/[?&]pgbouncer=1/, '')
-            .replace(/[?&]supa=base-pooler[^&]*/, '');
-          // Ensure postgresql:// protocol
-          if (dbUrlForMigration.startsWith('postgres://')) {
-            dbUrlForMigration = dbUrlForMigration.replace('postgres://', 'postgresql://');
-          }
-        }
-      }
-      
-      // Ensure DATABASE_URL has connection timeout
-      if (!dbUrlForMigration.includes('connect_timeout')) {
-        const separator = dbUrlForMigration.includes('?') ? '&' : '?';
-        dbUrlForMigration = `${dbUrlForMigration}${separator}connect_timeout=10`;
-      }
-      
-      const startTime = Date.now();
-      
-      // Try to deploy migrations
-      let migrationOutput = '';
-      let migrationSucceeded = false;
-      
-      try {
-        // Capture output to check for P3005 error
-        migrationOutput = execSync('prisma migrate deploy', { 
-          stdio: 'pipe',
-          env: {
-            ...process.env,
-            DATABASE_URL: dbUrlForMigration,
-          },
-          timeout: 2 * 60 * 1000, // 2 minute timeout (should be plenty)
-          maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
-          encoding: 'utf8',
-        }).toString();
+        const migrationsDir = path.join(__dirname, '..', 'prisma', 'migrations');
+        const migrations = fs.readdirSync(migrationsDir)
+          .filter(dir => {
+            const fullPath = path.join(migrationsDir, dir);
+            return fs.statSync(fullPath).isDirectory() && dir !== 'migration_lock.toml';
+          })
+          .sort();
         
-        // Print the output
-        console.log(migrationOutput);
-        migrationSucceeded = true;
-      } catch (migrateError) {
-        // Get error output - Prisma errors are in stdout
-        const stdout = migrateError.stdout?.toString() || '';
-        const stderr = migrateError.stderr?.toString() || '';
-        const errorOutput = stdout + stderr + (migrateError.message || '');
-        
-        // Print the error output
-        if (stdout) console.log(stdout);
-        if (stderr) console.error(stderr);
-        
-        // Check if it's a P3005 error (schema not empty)
-        const isP3005 = errorOutput.includes('P3005') || 
-                        errorOutput.includes('database schema is not empty') ||
-                        errorOutput.includes('schema is not empty');
-        
-        if (isP3005) {
-          console.log('   Database schema exists but migration history is missing.');
-          console.log('   Applying migration SQL, then baselining...');
+        if (migrations.length > 0) {
+          const firstMigration = migrations[0];
+          const migrationSqlPath = path.join(migrationsDir, firstMigration, 'migration.sql');
           
-          // Get the migration name and SQL from the migrations directory
-          const migrationsDir = path.join(__dirname, '..', 'prisma', 'migrations');
-          const migrations = fs.readdirSync(migrationsDir)
-            .filter(dir => {
-              const fullPath = path.join(migrationsDir, dir);
-              return fs.statSync(fullPath).isDirectory() && dir !== 'migration_lock.toml';
-            })
-            .sort();
-          
-          if (migrations.length > 0) {
-            const firstMigration = migrations[0];
-            const migrationSqlPath = path.join(migrationsDir, firstMigration, 'migration.sql');
+          if (fs.existsSync(migrationSqlPath)) {
+            const migrationSql = fs.readFileSync(migrationSqlPath, 'utf8').trim();
+            console.log(`   Running migration SQL for "${firstMigration}"...`);
+            console.log(`   SQL: ${migrationSql}`);
             
-            if (fs.existsSync(migrationSqlPath)) {
-              // Read and execute the migration SQL
-              const migrationSql = fs.readFileSync(migrationSqlPath, 'utf8').trim();
-              console.log(`   Running migration SQL for "${firstMigration}"...`);
-              console.log(`   SQL: ${migrationSql.substring(0, 100)}...`);
-              
-              // Use Prisma's executeRawUnsafe to run the SQL directly
-              // This is more reliable than prisma db execute
-              const { PrismaClient } = require('@prisma/client');
-              const prisma = new PrismaClient({
-                datasources: {
-                  db: {
-                    url: dbUrlForMigration,
-                  },
-                },
-              });
-              
-              try {
-                // Execute the SQL using Prisma's raw SQL execution
-                await prisma.$executeRawUnsafe(migrationSql);
-                console.log('   ✅ Migration SQL executed successfully');
-              } catch (sqlError) {
-                // If column already exists (IF NOT EXISTS), that's fine
-                const errorMsg = sqlError.message || '';
-                if (errorMsg.includes('already exists') || errorMsg.includes('duplicate') || (errorMsg.includes('column') && errorMsg.includes('exists'))) {
-                  console.log('   ℹ️  Column already exists (this is OK)');
-                } else {
-                  console.error('   ❌ SQL execution failed:', errorMsg);
-                  throw sqlError;
-                }
-              } finally {
-                await prisma.$disconnect();
-              }
-              
-              // Now baseline by marking the migration as applied
-              console.log(`   Marking migration "${firstMigration}" as applied...`);
-              const baselineOutput = execSync(`prisma migrate resolve --applied ${firstMigration}`, {
-                stdio: 'pipe',
+            // Use Prisma Client to execute SQL - must be synchronous
+            // Generate Prisma Client first if needed
+            try {
+              execSync('prisma generate', { stdio: 'pipe', env: { ...process.env, DATABASE_URL: dbUrlForMigration } });
+            } catch (e) {
+              // Already generated, that's fine
+            }
+            
+            // Execute SQL using a Node script that we'll run synchronously
+            const sqlScript = `
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
+
+(async () => {
+  try {
+    const sql = ${JSON.stringify(migrationSql)};
+    await prisma.$executeRawUnsafe(sql);
+    console.log('✅ Migration SQL executed successfully');
+  } catch (error) {
+    const errorMsg = error.message || '';
+    if (errorMsg.includes('already exists') || errorMsg.includes('duplicate') || (errorMsg.includes('column') && errorMsg.includes('exists'))) {
+      console.log('ℹ️  Column already exists (this is OK)');
+    } else {
+      console.error('❌ SQL execution failed:', errorMsg);
+      process.exit(1);
+    }
+  } finally {
+    await prisma.$disconnect();
+  }
+})();
+`;
+            
+            // Write temp script and execute it
+            const tempScriptPath = path.join(__dirname, '..', '.temp-migration-exec.js');
+            fs.writeFileSync(tempScriptPath, sqlScript);
+            
+            try {
+              execSync(`node ${tempScriptPath}`, {
+                stdio: 'inherit',
                 env: {
                   ...process.env,
                   DATABASE_URL: dbUrlForMigration,
                 },
                 timeout: 30 * 1000,
-                encoding: 'utf8',
-              }).toString();
-              if (baselineOutput) console.log(baselineOutput);
-              console.log('   ✅ Database baselined successfully');
-              
-              migrationSucceeded = true;
-            } else {
-              throw new Error(`Migration SQL file not found: ${migrationSqlPath}`);
+              });
+              console.log('   ✅ Migration SQL executed successfully');
+            } finally {
+              // Clean up temp script
+              try {
+                fs.unlinkSync(tempScriptPath);
+              } catch (e) {
+                // Ignore cleanup errors
+              }
             }
+            
+            // Now baseline
+            console.log(`   Marking migration "${firstMigration}" as applied...`);
+            const baselineOutput = execSync(`prisma migrate resolve --applied ${firstMigration}`, {
+              stdio: 'pipe',
+              env: {
+                ...process.env,
+                DATABASE_URL: dbUrlForMigration,
+              },
+              timeout: 30 * 1000,
+              encoding: 'utf8',
+            }).toString();
+            if (baselineOutput) console.log(baselineOutput);
+            console.log('   ✅ Database baselined successfully');
+            
+            migrationSucceeded = true;
           } else {
-            throw new Error('No migrations found to baseline');
+            throw new Error(`Migration SQL file not found: ${migrationSqlPath}`);
           }
         } else {
-          // Re-throw if it's a different error
-          throw migrateError;
+          throw new Error('No migrations found to baseline');
         }
-      }
-      
-      if (!migrationSucceeded) {
-        throw new Error('Migration deployment failed');
-      }
-      
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`✅ Migrations deployed successfully (took ${duration}s)`);
-    } catch (error) {
-      // In production (Vercel), migrations must succeed
-      if (process.env.VERCEL || process.env.CI) {
-        console.error('❌ Migration deployment failed in production');
-        console.error('   Error:', error.message);
-        console.error('   Build will fail to prevent deploying with incorrect schema');
-        process.exit(1);
       } else {
-        // Local development - allow build to continue
-        console.error('⚠️  Migration deployment failed:', error.message);
-        console.error('   This may be expected if running locally without a PostgreSQL database.');
+        throw migrateError;
       }
     }
-  })();
+    
+    if (!migrationSucceeded) {
+      throw new Error('Migration deployment failed');
+    }
+    
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`✅ Migrations deployed successfully (took ${duration}s)`);
+  } catch (error) {
+    if (process.env.VERCEL || process.env.CI) {
+      console.error('❌ Migration deployment failed in production');
+      console.error('   Error:', error.message);
+      console.error('   Build will fail to prevent deploying with incorrect schema');
+      process.exit(1);
+    } else {
+      console.error('⚠️  Migration deployment failed:', error.message);
+      console.error('   This may be expected if running locally without a PostgreSQL database.');
+    }
+  }
 } else {
   console.log('ℹ️  Detected SQLite - skipping migrations (use db:push for local dev)');
-  // For SQLite, migrations aren't needed - db push is used instead
-  // This is fine, we just skip migration deployment
 }
