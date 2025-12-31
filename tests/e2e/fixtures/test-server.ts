@@ -41,20 +41,14 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
     // Push schema to the test database using Prisma CLI
     // This must happen before any PrismaClient is instantiated
     // First, switch to the correct schema (SQLite for tests)
+    // Note: Prisma Client is already generated in vitest.setup.ts, so we don't need to regenerate
     execSync(`node scripts/switch-schema.js`, {
       env: { ...process.env, DATABASE_URL: databaseUrl },
       stdio: 'pipe',
       cwd: process.cwd(),
     })
     
-    // Generate Prisma Client with the switched schema
-    execSync(`npx prisma generate`, {
-      env: { ...process.env, DATABASE_URL: databaseUrl },
-      stdio: 'pipe',
-      cwd: process.cwd(),
-    })
-    
-    // Now push the schema
+    // Now push the schema (Prisma Client is already generated)
     execSync(`npx prisma db push --skip-generate --accept-data-loss --force-reset`, {
       env: { ...process.env, DATABASE_URL: databaseUrl },
       stdio: 'pipe',

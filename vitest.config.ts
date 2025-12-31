@@ -10,6 +10,8 @@ export default defineConfig({
     // Support both node (for API tests) and jsdom (for UI tests)
     // Default to node for existing tests, use jsdom for component tests
     environment: 'node',
+    // Increase hook timeout for tests that start servers
+    hookTimeout: 30000, // 30 seconds
     // Exclude Playwright e2e tests from Vitest
     exclude: [
       '**/node_modules/**',

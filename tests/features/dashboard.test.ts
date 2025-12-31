@@ -10,11 +10,14 @@ describe('Dashboard Features (F030-F033)', () => {
   let testAccount: any
   let testTransaction: any
 
-  beforeAll(async () => {
-    // Start test server with ephemeral database
-    testServer = await startTestServer(3000)
-    API_BASE = testServer.baseUrl
-  })
+  beforeAll(
+    async () => {
+      // Start test server with ephemeral database
+      testServer = await startTestServer(3000)
+      API_BASE = testServer.baseUrl
+    },
+    30000
+  ) // 30 second timeout for server startup
 
   afterAll(async () => {
     // Stop test server and clean up database

@@ -15,52 +15,57 @@ describe('Bulk Transactions API Tests', () => {
   let incomeAccountId: string
   let expensesAccountId: string
 
-  beforeAll(async () => {
-    // Start test server with ephemeral database
-    testServer = await startTestServer(3001)
-    
-    // Create PrismaClient using the test server's database URL
-    // The test server already creates user-1, so we can use it directly
-    prisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: testServer.databaseUrl,
+  beforeAll(
+    async () => {
+      // Start test server with ephemeral database
+      testServer = await startTestServer(3001)
+      
+      // Create PrismaClient using the test server's database URL
+      // The test server already creates user-1, so we can use it directly
+      prisma = new PrismaClient({
+        datasources: {
+          db: {
+            url: testServer.databaseUrl,
+          },
         },
-      },
-    })
-    adapter = new PrismaDataAdapter(prisma)
-    
-    // Create test accounts
-    const checking = await adapter.createAccount(TEST_USER_ID, {
-      name: 'Main Checking',
-      initialBalance: 1000,
-      balanceAsOf: LogicalDate.fromString('2025-01-01'),
-    })
-    const savings = await adapter.createAccount(TEST_USER_ID, {
-      name: 'Savings',
-      initialBalance: 5000,
-      balanceAsOf: LogicalDate.fromString('2025-01-01'),
-    })
-    const income = await adapter.createAccount(TEST_USER_ID, {
-      name: 'Income',
-      initialBalance: 0,
-      balanceAsOf: LogicalDate.fromString('2025-01-01'),
-    })
-    const expenses = await adapter.createAccount(TEST_USER_ID, {
-      name: 'Expenses',
-      initialBalance: 0,
-      balanceAsOf: LogicalDate.fromString('2025-01-01'),
-    })
+      })
+      adapter = new PrismaDataAdapter(prisma)
+      
+      // Create test accounts
+      const checking = await adapter.createAccount(TEST_USER_ID, {
+        name: 'Main Checking',
+        initialBalance: 1000,
+        balanceAsOf: LogicalDate.fromString('2025-01-01'),
+      })
+      const savings = await adapter.createAccount(TEST_USER_ID, {
+        name: 'Savings',
+        initialBalance: 5000,
+        balanceAsOf: LogicalDate.fromString('2025-01-01'),
+      })
+      const income = await adapter.createAccount(TEST_USER_ID, {
+        name: 'Income',
+        initialBalance: 0,
+        balanceAsOf: LogicalDate.fromString('2025-01-01'),
+      })
+      const expenses = await adapter.createAccount(TEST_USER_ID, {
+        name: 'Expenses',
+        initialBalance: 0,
+        balanceAsOf: LogicalDate.fromString('2025-01-01'),
+      })
 
-    checkingAccountId = checking.id
-    savingsAccountId = savings.id
-    incomeAccountId = income.id
-    expensesAccountId = expenses.id
-  })
+      checkingAccountId = checking.id
+      savingsAccountId = savings.id
+      incomeAccountId = income.id
+      expensesAccountId = expenses.id
+    },
+    30000
+  ) // 30 second timeout for server startup
 
   afterAll(async () => {
     await stopTestServer()
-    await prisma.$disconnect()
+    if (prisma) {
+      await prisma.$disconnect()
+    }
   })
 
   beforeEach(async () => {
