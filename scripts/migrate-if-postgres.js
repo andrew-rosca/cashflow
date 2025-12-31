@@ -76,15 +76,54 @@ if (isPostgres) {
     }
     
     const startTime = Date.now();
-    execSync('prisma migrate deploy', { 
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        DATABASE_URL: dbUrlForMigration,
-      },
-      timeout: 2 * 60 * 1000, // 2 minute timeout (should be plenty)
-      maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
-    });
+    
+    // Try to deploy migrations
+    try {
+      execSync('prisma migrate deploy', { 
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          DATABASE_URL: dbUrlForMigration,
+        },
+        timeout: 2 * 60 * 1000, // 2 minute timeout (should be plenty)
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
+      });
+    } catch (migrateError) {
+      // If migration fails with P3005 (schema not empty), we need to baseline
+      if (migrateError.message && migrateError.message.includes('P3005')) {
+        console.log('   Database schema exists but migration history is missing.');
+        console.log('   Baselining database (marking existing schema as migrated)...');
+        
+        // Get the migration name from the migrations directory
+        const fs = require('fs');
+        const migrationsDir = path.join(__dirname, '..', 'prisma', 'migrations');
+        const migrations = fs.readdirSync(migrationsDir)
+          .filter(dir => fs.statSync(path.join(migrationsDir, dir)).isDirectory())
+          .filter(dir => dir !== 'migration_lock.toml')
+          .sort();
+        
+        if (migrations.length > 0) {
+          // Mark the first migration as already applied
+          const firstMigration = migrations[0];
+          console.log(`   Marking migration "${firstMigration}" as applied...`);
+          execSync(`prisma migrate resolve --applied ${firstMigration}`, {
+            stdio: 'inherit',
+            env: {
+              ...process.env,
+              DATABASE_URL: dbUrlForMigration,
+            },
+            timeout: 30 * 1000, // 30 second timeout
+          });
+          console.log('   ✅ Database baselined successfully');
+        } else {
+          throw new Error('No migrations found to baseline');
+        }
+      } else {
+        // Re-throw if it's a different error
+        throw migrateError;
+      }
+    }
+    
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`✅ Migrations deployed successfully (took ${duration}s)`);
   } catch (error) {
