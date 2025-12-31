@@ -30,20 +30,20 @@ if (isPostgres) {
   console.log('   Database:', maskedUrl.split('@')[1] || 'configured');
   
   try {
-    // Run migration with timeout (5 minutes should be plenty)
-    // Use direct prisma command instead of npx for faster execution
+    // Run migration with timeout (2 minutes should be plenty for a single migration)
+    // Use direct prisma command (prisma is in node_modules/.bin after npm install)
     console.log('   Running: prisma migrate deploy');
+    console.log('   This may take a moment to connect to the database...');
+    
+    const startTime = Date.now();
     execSync('prisma migrate deploy', { 
       stdio: 'inherit',
-      env: {
-        ...process.env,
-        // Add connection timeout to prevent hanging
-        PRISMA_CLIENT_ENGINE_TYPE: 'binary',
-      },
-      timeout: 5 * 60 * 1000, // 5 minute timeout
+      env: process.env,
+      timeout: 2 * 60 * 1000, // 2 minute timeout (should be plenty)
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
     });
-    console.log('✅ Migrations deployed successfully');
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`✅ Migrations deployed successfully (took ${duration}s)`);
   } catch (error) {
     // In production (Vercel), migrations must succeed
     if (process.env.VERCEL || process.env.CI) {
