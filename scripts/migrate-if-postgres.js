@@ -35,10 +35,22 @@ if (isPostgres) {
     console.log('   Running: prisma migrate deploy');
     console.log('   This may take a moment to connect to the database...');
     
+    // Ensure DATABASE_URL has connection timeout if it's a PostgreSQL connection
+    // Some providers need explicit timeout parameters to prevent hanging
+    let dbUrlWithTimeout = dbUrl;
+    if (isPostgres && !dbUrl.includes('connect_timeout')) {
+      // Add connection timeout parameter (10 seconds)
+      const separator = dbUrl.includes('?') ? '&' : '?';
+      dbUrlWithTimeout = `${dbUrl}${separator}connect_timeout=10`;
+    }
+    
     const startTime = Date.now();
     execSync('prisma migrate deploy', { 
       stdio: 'inherit',
-      env: process.env,
+      env: {
+        ...process.env,
+        DATABASE_URL: dbUrlWithTimeout,
+      },
       timeout: 2 * 60 * 1000, // 2 minute timeout (should be plenty)
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
     });
