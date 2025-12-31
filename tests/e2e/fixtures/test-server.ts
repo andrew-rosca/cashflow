@@ -236,24 +236,40 @@ export async function stopTestServer(
  */
 async function waitForServer(url: string, timeout: number): Promise<void> {
   const startTime = Date.now()
-  const maxAttempts = 60
+  const maxAttempts = Math.floor(timeout / 1000) // One attempt per second
   let attempts = 0
+  let lastError: Error | null = null
 
   while (Date.now() - startTime < timeout && attempts < maxAttempts) {
     try {
-      const response = await fetch(url)
-      if (response.ok) {
+      const response = await fetch(url, {
+        // Allow redirects (Next.js might redirect to /login)
+        redirect: 'follow',
+        // Add a short timeout for each request
+        signal: AbortSignal.timeout(2000),
+      })
+      // Accept any response status (even redirects) as long as we get a response
+      if (response.status >= 200 && response.status < 500) {
         return
       }
-    } catch (error) {
+      lastError = new Error(`Server returned status ${response.status}`)
+    } catch (error: any) {
       // Server not ready yet, continue waiting
+      lastError = error
+      if (error.name === 'AbortError') {
+        // Request timeout - server might be starting
+        lastError = new Error('Request timeout - server may still be starting')
+      }
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second between attempts
     attempts++
   }
 
-  throw new Error(`Server did not become ready at ${url} within ${timeout}ms`)
+  const errorMsg = lastError 
+    ? `Server did not become ready at ${url} within ${timeout}ms. Last error: ${lastError.message}`
+    : `Server did not become ready at ${url} within ${timeout}ms`
+  throw new Error(errorMsg)
 }
 
 /**
