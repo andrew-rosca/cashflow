@@ -18,6 +18,7 @@ describe('Bulk Transactions API Tests', () => {
   beforeAll(
     async () => {
       // Start test server with ephemeral database
+      // Note: Server startup can take 30-60 seconds in CI
       testServer = await startTestServer(3001)
       
       // Create PrismaClient using the test server's database URL
@@ -58,8 +59,8 @@ describe('Bulk Transactions API Tests', () => {
       incomeAccountId = income.id
       expensesAccountId = expenses.id
     },
-    30000
-  ) // 30 second timeout for server startup
+    60000
+  ) // 60 second timeout for server startup (CI can be slow)
 
   afterAll(async () => {
     await stopTestServer()

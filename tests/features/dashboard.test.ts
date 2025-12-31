@@ -13,11 +13,12 @@ describe('Dashboard Features (F030-F033)', () => {
   beforeAll(
     async () => {
       // Start test server with ephemeral database
+      // Note: Server startup can take 30-60 seconds in CI
       testServer = await startTestServer(3000)
       API_BASE = testServer.baseUrl
     },
-    30000
-  ) // 30 second timeout for server startup
+    60000
+  ) // 60 second timeout for server startup (CI can be slow)
 
   afterAll(async () => {
     // Stop test server and clean up database

@@ -128,8 +128,8 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
     shell: true,
   })
 
-  // Wait for server to be ready
-  await waitForServer(baseUrl, 30000)
+  // Wait for server to be ready (allow up to 60 seconds in CI)
+  await waitForServer(baseUrl, 60000)
 
   const server: TestServer = {
     baseUrl,
