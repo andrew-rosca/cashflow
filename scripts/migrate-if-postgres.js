@@ -25,22 +25,40 @@ const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgr
 
 if (isPostgres) {
   console.log('🚀 Detected PostgreSQL - deploying migrations...');
+  // Log masked database URL for debugging (hide password)
+  const maskedUrl = dbUrl.replace(/:[^:@]+@/, ':****@');
+  console.log('   Database:', maskedUrl.split('@')[1] || 'configured');
+  
   try {
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+    // Run migration with timeout (5 minutes should be plenty)
+    // Use direct prisma command instead of npx for faster execution
+    console.log('   Running: prisma migrate deploy');
+    execSync('prisma migrate deploy', { 
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        // Add connection timeout to prevent hanging
+        PRISMA_CLIENT_ENGINE_TYPE: 'binary',
+      },
+      timeout: 5 * 60 * 1000, // 5 minute timeout
+      maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
+    });
     console.log('✅ Migrations deployed successfully');
   } catch (error) {
-    // If migrations fail, log the error but don't fail the build
-    // This allows the build to continue even if database is temporarily unavailable
-    // In production (Vercel), the database should always be available
-    console.error('⚠️  Migration deployment failed:', error.message);
-    console.error('   This may be expected if running locally without a PostgreSQL database.');
-    console.error('   In production (Vercel), migrations will run automatically during deployment.');
-    // Don't exit with error - let the build continue
-    // The build will fail later if Prisma Client generation fails, which is appropriate
+    // In production (Vercel), migrations must succeed
+    if (process.env.VERCEL || process.env.CI) {
+      console.error('❌ Migration deployment failed in production');
+      console.error('   Error:', error.message);
+      console.error('   Build will fail to prevent deploying with incorrect schema');
+      process.exit(1);
+    } else {
+      // Local development - allow build to continue
+      console.error('⚠️  Migration deployment failed:', error.message);
+      console.error('   This may be expected if running locally without a PostgreSQL database.');
+    }
   }
 } else {
   console.log('ℹ️  Detected SQLite - skipping migrations (use db:push for local dev)');
   // For SQLite, migrations aren't needed - db push is used instead
   // This is fine, we just skip migration deployment
 }
-

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/switch-schema.js && npm run db:migrate:deploy:if-postgres && prisma generate && next build",
+    "vercel-build": "node scripts/switch-schema.js && npm run db:migrate:deploy:if-postgres && prisma generate && next build",
     "db:migrate:deploy:if-postgres": "node scripts/migrate-if-postgres.js",
     "start": "next start",
     "lint": "next lint",
