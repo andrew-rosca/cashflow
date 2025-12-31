@@ -35,13 +35,52 @@ if (isPostgres) {
     console.log('   Running: prisma migrate deploy');
     console.log('   This may take a moment to connect to the database...');
     
-    // Ensure DATABASE_URL has connection timeout if it's a PostgreSQL connection
-    // Some providers need explicit timeout parameters to prevent hanging
-    let dbUrlWithTimeout = dbUrl;
-    if (isPostgres && !dbUrl.includes('connect_timeout')) {
-      // Add connection timeout parameter (10 seconds)
-      const separator = dbUrl.includes('?') ? '&' : '?';
-      dbUrlWithTimeout = `${dbUrl}${separator}connect_timeout=10`;
+    // For Supabase (and other poolers), migrations need a direct connection
+    // pgBouncer (port 6543) doesn't support migrations - we need port 5432
+    let dbUrlForMigration = dbUrl;
+    
+    // For Supabase, migrations need a direct connection (not pgBouncer)
+    // pgBouncer (port 6543) doesn't support DDL operations like migrations
+    if (dbUrl.includes('pooler.supabase.com') || dbUrl.includes(':6543') || dbUrl.includes('pgbouncer=true')) {
+      console.log('   Detected Supabase pooler - switching to direct connection for migrations...');
+      
+      // Try to use POSTGRES_URL_NON_POOLING first (if it's correctly configured)
+      if (process.env.POSTGRES_URL_NON_POOLING && !process.env.POSTGRES_URL_NON_POOLING.includes('pooler')) {
+        console.log('   Using POSTGRES_URL_NON_POOLING for migrations...');
+        dbUrlForMigration = process.env.POSTGRES_URL_NON_POOLING;
+      } else if (process.env.POSTGRES_HOST && process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD) {
+        // Construct direct connection from individual components
+        const directHost = process.env.POSTGRES_HOST;
+        const user = process.env.POSTGRES_USER;
+        const password = process.env.POSTGRES_PASSWORD;
+        const database = process.env.POSTGRES_DATABASE || 'postgres';
+        dbUrlForMigration = `postgresql://${user}:${password}@${directHost}:5432/${database}?sslmode=require`;
+        console.log(`   Constructed direct connection using POSTGRES_HOST: ${directHost}`);
+      } else {
+        // Fallback: parse pooler URL and construct direct connection
+        const match = dbUrl.match(/postgres(ql)?:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/);
+        if (match) {
+          const [, , user, password, , , database] = match;
+          // Use POSTGRES_HOST if available, otherwise try to extract from URL
+          const directHost = process.env.POSTGRES_HOST || 'db.qwdthwwxkcpicvetavlc.supabase.co';
+          dbUrlForMigration = `postgresql://${user}:${password}@${directHost}:5432/${database}?sslmode=require`;
+          console.log(`   Constructed direct connection: ${directHost}`);
+        } else {
+          // Last resort: simple string replacement
+          dbUrlForMigration = dbUrl
+            .replace(':6543', ':5432')
+            .replace('pooler.supabase.com', 'supabase.co')
+            .replace(/[?&]pgbouncer=true/, '')
+            .replace(/[?&]pgbouncer=1/, '')
+            .replace(/[?&]supa=base-pooler[^&]*/, '');
+        }
+      }
+    }
+    
+    // Ensure DATABASE_URL has connection timeout
+    if (!dbUrlForMigration.includes('connect_timeout')) {
+      const separator = dbUrlForMigration.includes('?') ? '&' : '?';
+      dbUrlForMigration = `${dbUrlForMigration}${separator}connect_timeout=10`;
     }
     
     const startTime = Date.now();
@@ -49,7 +88,7 @@ if (isPostgres) {
       stdio: 'inherit',
       env: {
         ...process.env,
-        DATABASE_URL: dbUrlWithTimeout,
+        DATABASE_URL: dbUrlForMigration,
       },
       timeout: 2 * 60 * 1000, // 2 minute timeout (should be plenty)
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
