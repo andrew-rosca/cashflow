@@ -47,6 +47,13 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
       cwd: process.cwd(),
     })
     
+    // Generate Prisma Client with the switched schema
+    execSync(`npx prisma generate`, {
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+      stdio: 'pipe',
+      cwd: process.cwd(),
+    })
+    
     // Now push the schema
     execSync(`npx prisma db push --skip-generate --accept-data-loss --force-reset`, {
       env: { ...process.env, DATABASE_URL: databaseUrl },

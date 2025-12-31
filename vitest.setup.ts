@@ -25,10 +25,17 @@ beforeAll(async () => {
   // Push schema to the test database using Prisma CLI
   // This must happen before any PrismaClient is instantiated
   // First, switch to the correct schema (SQLite for tests)
-  // Then push the schema
+  // Then generate Prisma Client, then push the schema
   try {
     // Switch schema to SQLite (tests use SQLite)
     execSync(`node scripts/switch-schema.js`, {
+      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+      stdio: 'pipe', // Suppress output but allow errors
+      cwd: process.cwd(),
+    })
+    
+    // Generate Prisma Client with the switched schema
+    execSync(`npx prisma generate`, {
       env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
       stdio: 'pipe', // Suppress output but allow errors
       cwd: process.cwd(),
