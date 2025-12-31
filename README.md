@@ -1,6 +1,20 @@
 # CashFlow
 
-A personal finance application that helps you project future account balances based on expected inflows and outflows.
+**Live at: [https://cashflow.brasslogic.money](https://cashflow.brasslogic.money)**
+
+CashFlow is a personal finance projection tool that helps you see into the future of your bank accounts. Never run out of money again by projecting your account balances weeks or months ahead based on expected transactions.
+
+![CashFlow App Screenshot](./public/landing-screenshot.png)
+
+## What It Does
+
+CashFlow allows you to:
+- **Project future balances**: See your account balances weeks or months ahead based on expected transactions
+- **Set up recurring transactions**: Define recurring income and expenses once, and they'll automatically appear in your projections
+- **Get early warnings**: Be alerted when balances might go negative, so you can plan ahead
+- **Track multiple accounts**: Manage all your accounts in one place
+
+Simply add your accounts, set up your recurring transactions (paychecks, rent, bills, etc.), and CashFlow will show you a projection of your balances over time. The app highlights potential shortfalls in orange, giving you advance notice to adjust your spending or income.
 
 ## Quick Start
 

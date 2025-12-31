@@ -230,6 +230,43 @@ function LoginForm() {
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="mt-20 pb-8 text-center">
+          <div className="flex justify-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+            <a 
+              href="/privacy" 
+              className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <span>•</span>
+            <a 
+              href="/terms" 
+              className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              Terms of Service
+            </a>
+            <span>•</span>
+            <a 
+              href="https://brasslogic.money" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              BrassLogic
+            </a>
+            <span>•</span>
+            <a 
+              href="https://github.com/andrew-rosca/cashflow" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              GitHub
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   )
