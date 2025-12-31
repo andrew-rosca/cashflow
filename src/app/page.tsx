@@ -1,8 +1,5 @@
 'use client'
 
-// Force dynamic rendering - this page fetches data from API routes that require authentication
-export const dynamic = 'force-dynamic'
-
 import React, { useState, useEffect, useRef } from 'react'
 import { signOut } from 'next-auth/react'
 import DateInput from '@/components/DateInput'
