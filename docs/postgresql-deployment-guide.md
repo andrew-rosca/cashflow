@@ -128,53 +128,42 @@ vercel
 vercel --prod
 ```
 
-## Step 5: Run Database Migrations
+## Step 5: Database Migrations (Automatic)
 
-After first deployment, you need to run Prisma migrations to create/update the database schema:
+**Migrations now run automatically during deployment!** 🎉
 
-### Option A: Using Vercel CLI (Recommended)
+The build script (`npm run build`) automatically:
+1. Switches to the PostgreSQL schema
+2. **Deploys any pending migrations** (only for PostgreSQL)
+3. Generates Prisma Client
+4. Builds the Next.js app
+
+This means migrations are applied automatically on every deployment to Vercel. No manual steps required!
+
+### How It Works
+
+- **Production (PostgreSQL)**: Migrations are automatically deployed during `npm run build`
+- **Local Development (SQLite)**: Migrations are skipped (use `npm run db:push` for local schema changes)
+
+### Manual Migration (If Needed)
+
+If you ever need to run migrations manually (e.g., for troubleshooting):
 
 ```bash
-# Install Vercel CLI if you haven't
-npm i -g vercel
-
-# Login to Vercel
-vercel login
-
-# Link your project (if not already linked)
-vercel link
-
-# Pull environment variables
+# Using Vercel CLI
 vercel env pull .env.production
-
-# Load environment variables
 export $(cat .env.production | grep -v '^#' | xargs)
+npm run db:migrate:deploy
 
-# The build script will automatically switch to PostgreSQL schema
-# Generate Prisma client with PostgreSQL schema
-npm run db:generate
-
-# Deploy migrations to production database
+# Or manually
+export DATABASE_URL="your-postgresql-url"
 npm run db:migrate:deploy
 ```
 
-### Option B: Manual Migration
-
-1. Go to your Vercel project → **Settings** → **Environment Variables**
-2. Copy the `DATABASE_URL` value
-3. Run locally with that connection string:
-   ```bash
-   export DATABASE_URL="your-postgresql-url"
-   npm run db:generate
-   npm run db:migrate:deploy
-   ```
-
 ### Migration vs db push
 
-- **`npm run db:migrate:deploy`** (Recommended for production): Uses Prisma migrations for version-controlled, reversible schema changes
-- **`npm run db:push`**: Directly pushes schema changes (faster but not version-controlled)
-
-For production, always use `db:migrate:deploy` to ensure migrations are tracked and can be reviewed.
+- **`npm run db:migrate:deploy`** (Automatic in production): Uses Prisma migrations for version-controlled, reversible schema changes
+- **`npm run db:push`**: Directly pushes schema changes (faster but not version-controlled, used for local SQLite dev)
 
 ## Step 6: Verify Deployment
 

@@ -1,17 +1,21 @@
 # Production Database Migration Guide
 
-## Adding the `preferences` Column
+## Automatic Migrations
+
+**Good news!** Migrations now run automatically during Vercel deployments. The build script automatically detects PostgreSQL and deploys any pending migrations.
 
 If you see an error like:
 ```
 The column `User.preferences` does not exist in the current database.
 ```
 
-You need to run a migration to add the column to your production database.
+This means a migration hasn't been applied yet. This can happen if:
+1. The migration was added after the last deployment
+2. The build process didn't complete successfully
 
 ## Quick Fix: Deploy Existing Migration
 
-The project now includes a migration for the `preferences` column. To apply it:
+If migrations didn't run automatically, you can deploy them manually:
 
 ### Option 1: Using Vercel CLI (Recommended)
 
