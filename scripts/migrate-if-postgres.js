@@ -44,35 +44,27 @@ if (isPostgres) {
     if (dbUrl.includes('pooler.supabase.com') || dbUrl.includes(':6543') || dbUrl.includes('pgbouncer=true')) {
       console.log('   Detected Supabase pooler - switching to direct connection for migrations...');
       
-      // Try to use POSTGRES_URL_NON_POOLING first (if it's correctly configured)
-      if (process.env.POSTGRES_URL_NON_POOLING && !process.env.POSTGRES_URL_NON_POOLING.includes('pooler')) {
+      // Use POSTGRES_URL_NON_POOLING if available (Supabase provides this)
+      // Even if it says "pooler" in the host, port 5432 is the direct connection
+      if (process.env.POSTGRES_URL_NON_POOLING) {
         console.log('   Using POSTGRES_URL_NON_POOLING for migrations...');
         dbUrlForMigration = process.env.POSTGRES_URL_NON_POOLING;
-      } else if (process.env.POSTGRES_HOST && process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD) {
-        // Construct direct connection from individual components
-        const directHost = process.env.POSTGRES_HOST;
-        const user = process.env.POSTGRES_USER;
-        const password = process.env.POSTGRES_PASSWORD;
-        const database = process.env.POSTGRES_DATABASE || 'postgres';
-        dbUrlForMigration = `postgresql://${user}:${password}@${directHost}:5432/${database}?sslmode=require`;
-        console.log(`   Constructed direct connection using POSTGRES_HOST: ${directHost}`);
+        // Ensure it uses postgresql:// protocol (not postgres://)
+        if (dbUrlForMigration.startsWith('postgres://')) {
+          dbUrlForMigration = dbUrlForMigration.replace('postgres://', 'postgresql://');
+        }
       } else {
-        // Fallback: parse pooler URL and construct direct connection
-        const match = dbUrl.match(/postgres(ql)?:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/);
-        if (match) {
-          const [, , user, password, , , database] = match;
-          // Use POSTGRES_HOST if available, otherwise try to extract from URL
-          const directHost = process.env.POSTGRES_HOST || 'db.qwdthwwxkcpicvetavlc.supabase.co';
-          dbUrlForMigration = `postgresql://${user}:${password}@${directHost}:5432/${database}?sslmode=require`;
-          console.log(`   Constructed direct connection: ${directHost}`);
-        } else {
-          // Last resort: simple string replacement
-          dbUrlForMigration = dbUrl
-            .replace(':6543', ':5432')
-            .replace('pooler.supabase.com', 'supabase.co')
-            .replace(/[?&]pgbouncer=true/, '')
-            .replace(/[?&]pgbouncer=1/, '')
-            .replace(/[?&]supa=base-pooler[^&]*/, '');
+        // Fallback: change port from 6543 to 5432 (same host, different port)
+        // Supabase uses the same hostname for both pooler and direct connections
+        console.log('   Converting pooler URL to direct connection (port 5432)...');
+        dbUrlForMigration = dbUrl
+          .replace(':6543', ':5432')
+          .replace(/[?&]pgbouncer=true/, '')
+          .replace(/[?&]pgbouncer=1/, '')
+          .replace(/[?&]supa=base-pooler[^&]*/, '');
+        // Ensure postgresql:// protocol
+        if (dbUrlForMigration.startsWith('postgres://')) {
+          dbUrlForMigration = dbUrlForMigration.replace('postgres://', 'postgresql://');
         }
       }
     }
