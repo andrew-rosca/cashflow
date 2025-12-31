@@ -5,6 +5,32 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { unlinkSync, existsSync } from 'fs'
 
+// CRITICAL: Run schema switching and Prisma generation synchronously at module load time
+// This must happen BEFORE any test files are imported, because module imports happen
+// synchronously and test files may import modules that use PrismaClient.
+// We use a default SQLite URL for schema switching - actual test databases are created in beforeAll
+const defaultTestDbUrl = 'file:./prisma/test-schema.db'
+
+try {
+  // Switch schema to SQLite (tests use SQLite)
+  execSync(`node scripts/switch-schema.js`, {
+    env: { ...process.env, DATABASE_URL: defaultTestDbUrl },
+    stdio: 'pipe', // Suppress output but allow errors
+    cwd: process.cwd(),
+  })
+  
+  // Generate Prisma Client with the switched schema
+  // This must happen before any module imports PrismaClient
+  execSync(`npx prisma generate`, {
+    env: { ...process.env, DATABASE_URL: defaultTestDbUrl },
+    stdio: 'pipe', // Suppress output but allow errors
+    cwd: process.cwd(),
+  })
+} catch (error: any) {
+  // If generation fails, log the error - tests will fail with clear messages
+  console.error('Failed to generate Prisma Client:', error?.message || error)
+}
+
 // Use a temporary file database for tests (ephemeral - gets deleted after tests)
 // This allows proper schema initialization unlike in-memory databases
 // Each test run gets a unique database file that is cleaned up afterwards
@@ -23,25 +49,9 @@ beforeAll(async () => {
   process.env.DATABASE_URL = `file:${testDbPath}`
   
   // Push schema to the test database using Prisma CLI
-  // This must happen before any PrismaClient is instantiated
-  // First, switch to the correct schema (SQLite for tests)
-  // Then generate Prisma Client, then push the schema
+  // Prisma Client is already generated above, so we just need to push the schema
   try {
-    // Switch schema to SQLite (tests use SQLite)
-    execSync(`node scripts/switch-schema.js`, {
-      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
-      stdio: 'pipe', // Suppress output but allow errors
-      cwd: process.cwd(),
-    })
-    
-    // Generate Prisma Client with the switched schema
-    execSync(`npx prisma generate`, {
-      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
-      stdio: 'pipe', // Suppress output but allow errors
-      cwd: process.cwd(),
-    })
-    
-    // Now push the schema
+    // Now push the schema to the specific test database
     execSync(`npx prisma db push --skip-generate --accept-data-loss --force-reset`, {
       env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
       stdio: 'pipe', // Suppress output but allow errors
