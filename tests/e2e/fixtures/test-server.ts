@@ -251,17 +251,22 @@ async function waitForServer(url: string, timeout: number): Promise<void> {
         // Add a short timeout for each request
         signal: AbortSignal.timeout(2000),
       })
-      // Accept any response status (even redirects) as long as we get a response
-      if (response.status >= 200 && response.status < 500) {
+      // Accept any HTTP response (2xx, 3xx, 4xx, 5xx) as "server is ready"
+      // Even 500 errors mean the server is running and responding
+      // The only thing that matters is that we get a response (not a connection error)
+      if (response.status >= 200) {
         return
       }
-      lastError = new Error(`Server returned status ${response.status}`)
+      lastError = new Error(`Server returned unexpected status ${response.status}`)
     } catch (error: any) {
-      // Server not ready yet, continue waiting
+      // Connection errors mean server is not ready yet
       lastError = error
       if (error.name === 'AbortError') {
         // Request timeout - server might be starting
         lastError = new Error('Request timeout - server may still be starting')
+      } else if (error.code === 'ECONNREFUSED' || error.message?.includes('ECONNREFUSED')) {
+        // Connection refused - server definitely not ready
+        lastError = new Error('Connection refused - server not ready')
       }
     }
 
