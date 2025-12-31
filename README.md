@@ -4,10 +4,12 @@ A personal finance application that helps you project future account balances ba
 
 ## Quick Start
 
-1. Copy `.env.example` to `.env` and configure your database URL
-2. Run `./init.sh` to install dependencies and start the development server
-   - This will automatically seed the database with sample data
-3. Open [http://localhost:3000](http://localhost:3000) in your browser
+1. Run `./init.sh` to install dependencies and start the development server
+   - This will automatically set up SQLite for local development
+   - The database will be seeded with sample data
+2. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+**Note**: For local development, no database configuration is needed - SQLite is used automatically. For production deployment, see the [PostgreSQL Deployment Guide](./docs/postgresql-deployment-guide.md).
 
 ### Sample Data
 
@@ -30,9 +32,9 @@ npm run db:seed
 ### Stack
 - **Frontend**: Next.js 14 (App Router) + React + TypeScript + Tailwind CSS
 - **Backend**: Next.js API Routes
-- **Database**: PostgreSQL + Prisma ORM
-- **Auth**: NextAuth.js (Apple/Google Sign-In - to be configured)
-- **Deployment**: Vercel-ready
+- **Database**: SQLite (local dev/tests) + PostgreSQL (production) via Prisma ORM
+- **Auth**: NextAuth.js with PrismaAdapter (Google and Apple Sign-In configured)
+- **Deployment**: Vercel-ready with PostgreSQL
 
 ### Key Design Decisions
 
@@ -42,32 +44,39 @@ npm run db:seed
 
 3. **API-First**: All functionality exposed via REST API, making it easy to add mobile clients or third-party integrations
 
-4. **Projection Engine**: Materializes recurring transactions and calculates daily balances (to be implemented)
+4. **Projection Engine**: Materializes recurring transactions and calculates daily balances for future account projections
 
 ## Project Structure
 
 ```
 ├── docs/
-│   ├── specification.md      # Project requirements
-│   ├── feature_list.json     # All features to implement
-│   ├── implementation-progress.txt  # Development log
-│   ├── coder-instructions.md # Guidelines for coding sessions
-│   └── initializer-instructions.md  # Setup guidelines
+│   ├── specification.md           # Project requirements
+│   ├── feature_list.json          # All features to implement
+│   ├── implementation-progress.txt # Development log
+│   ├── coder-instructions.md       # Guidelines for coding sessions
+│   ├── initializer-instructions.md # Setup guidelines
+│   ├── postgresql-deployment-guide.md # Production deployment guide
+│   └── google-oauth-setup.md       # OAuth configuration guide
 ├── prisma/
-│   └── schema.prisma         # Database schema
+│   ├── schema.prisma              # Active schema (auto-switched based on DATABASE_URL)
+│   ├── schema.sqlite.prisma       # SQLite schema (for local dev and tests)
+│   └── schema.postgres.prisma     # PostgreSQL schema (for production)
+├── scripts/
+│   ├── switch-schema.js            # Automatic schema switching script
+│   └── seed-user.js                # User seeding utility
 ├── src/
 │   ├── app/
-│   │   ├── api/              # API routes
+│   │   ├── api/                    # API routes
 │   │   │   ├── accounts/
 │   │   │   ├── transactions/
 │   │   │   └── projections/
-│   │   ├── layout.tsx        # Root layout
-│   │   └── page.tsx          # Home page
+│   │   ├── layout.tsx              # Root layout
+│   │   └── page.tsx                # Home page
 │   └── lib/
-│       ├── db.ts             # Prisma client
-│       ├── data-adapter.ts   # Data adapter interface
-│       └── prisma-adapter.ts # Prisma implementation
-└── init.sh                   # Setup script
+│       ├── db.ts                   # Prisma client
+│       ├── data-adapter.ts         # Data adapter interface
+│       └── prisma-adapter.ts       # Prisma implementation
+└── init.sh                         # Setup script
 ```
 
 ## Development Workflow
@@ -82,11 +91,18 @@ npm run db:seed
 
 Run tests with:
 ```bash
-npm test          # Run all tests
+npm test          # Run all unit tests
 npm test:watch    # Run tests in watch mode
+npm test:e2e      # Run end-to-end tests (Playwright)
+npm test:e2e:ui   # Run E2E tests with UI mode
 ```
 
-**Important:** Tests use an in-memory SQLite database (`file::memory:?cache=shared`) to ensure complete isolation from development data. Test data is ephemeral and never persists to disk, preventing pollution of your seeded sample data or manual test data.
+**Important:** Tests use temporary SQLite database files to ensure complete isolation from development data. Test data is ephemeral and never persists to disk, preventing pollution of your seeded sample data or manual test data.
+
+**Database Configuration:**
+- **Local Development**: Uses SQLite (`file:./dev.db`) - no setup required
+- **Tests**: Uses temporary SQLite files - automatically configured
+- **Production**: Uses PostgreSQL - schema automatically switches based on `DATABASE_URL` format
 
 ## Features
 
@@ -152,6 +168,14 @@ tx-456	recurring	acc-789	2800.00	2025-01-20	Paycheck		weekly	2			-1	-1
 
 ### Projections
 - `GET /api/projections` - Get projected balances (query: accountId, startDate, endDate)
+
+## Deployment
+
+For production deployment, see the [PostgreSQL Deployment Guide](./docs/postgresql-deployment-guide.md).
+
+The application uses automatic schema switching:
+- **Local Development**: SQLite (no configuration needed)
+- **Production**: PostgreSQL (set `DATABASE_URL` in Vercel)
 
 ## License
 

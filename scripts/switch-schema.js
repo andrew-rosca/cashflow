@@ -20,6 +20,7 @@ const targetSchema = path.join(prismaDir, 'schema.prisma');
 const dbUrl = process.env.DATABASE_URL || '';
 
 // Determine which schema to use
+// Prefer postgresql:// over postgres:// for better Prisma compatibility
 const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://');
 
 const sourceSchema = isPostgres ? postgresSchema : sqliteSchema;
