@@ -23,13 +23,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse preferences JSON (SQLite stores as string, PostgreSQL as JSON)
+    // If preferences is null/undefined, return defaults
     let preferences: UserPreferences = {}
     const prefs = (user as any).preferences
     if (prefs) {
-      if (typeof prefs === 'string') {
-        preferences = JSON.parse(prefs)
-      } else {
-        preferences = prefs as UserPreferences
+      try {
+        if (typeof prefs === 'string') {
+          preferences = JSON.parse(prefs)
+        } else {
+          preferences = prefs as UserPreferences
+        }
+      } catch (error) {
+        // If JSON parsing fails, use empty preferences (will use defaults)
+        console.error('Error parsing user preferences:', error)
+        preferences = {}
       }
     }
 

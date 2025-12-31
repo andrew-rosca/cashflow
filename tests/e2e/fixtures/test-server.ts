@@ -113,6 +113,7 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
       DATABASE_URL: databaseUrl,
       PORT: port.toString(),
       NODE_ENV: 'test',
+      TEST_MODE: 'true', // Additional flag for test mode detection
     },
     stdio: 'pipe',
     shell: true,

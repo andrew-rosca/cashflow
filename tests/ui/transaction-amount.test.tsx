@@ -46,6 +46,14 @@ describe('Transaction Amount Input', () => {
           json: async () => []
         })
       }
+      if (url.includes('/api/user/settings')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            formatNumbersWithoutDecimals: false
+          })
+        })
+      }
       return Promise.reject(new Error(`Unmocked URL: ${url}`))
     })
   })
@@ -85,16 +93,18 @@ describe('Transaction Amount Input', () => {
     await user.clear(amountInput)
     await user.type(amountInput, '-100')
 
-    // Find and submit the form - the button might be "Save" or "Add Transaction"
+    // Find and submit the form - the button text is "Add" for new transactions or "Save" for edits
+    // The button is outside the form with form="transaction-form" attribute
     await waitFor(() => {
-      const submitButton = screen.queryByRole('button', { name: /save/i }) ||
-                          screen.queryByRole('button', { name: /add transaction/i }) ||
-                          document.querySelector('form button[type="submit"]')
+      const submitButton = screen.queryByRole('button', { name: /^(Add|Save)$/i }) ||
+                          document.querySelector('button[type="submit"][form="transaction-form"]') ||
+                          document.querySelector('button[type="submit"]')
       expect(submitButton).toBeInTheDocument()
     })
-    const submitButton = screen.queryByRole('button', { name: /save/i }) ||
-                        screen.queryByRole('button', { name: /add transaction/i }) ||
-                        document.querySelector('form button[type="submit"]') as HTMLButtonElement
+    const submitButton = screen.queryByRole('button', { name: /^(Add|Save)$/i }) ||
+                        document.querySelector('button[type="submit"][form="transaction-form"]') as HTMLButtonElement ||
+                        document.querySelector('button[type="submit"]') as HTMLButtonElement
+    expect(submitButton).toBeTruthy()
     await user.click(submitButton!)
 
     // Wait for the POST request

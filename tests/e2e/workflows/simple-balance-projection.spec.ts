@@ -293,7 +293,9 @@ test.describe('Simple Balance Projection', () => {
       const balanceCells = transactionDateRow.first().locator('td')
       const balanceCell = balanceCells.last()
       const balanceText = await balanceCell.textContent()
-      expect(balanceText?.trim()).toBe('85.00')
+      // Handle both formatted (with decimals) and unformatted (without decimals) numbers
+      const balanceValue = parseFloat(balanceText?.replace(/,/g, '') || '0')
+      expect(balanceValue).toBe(85)
     }
   })
 })
