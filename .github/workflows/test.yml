@@ -27,13 +27,6 @@ jobs:
         id: tests
         run: npm test
       
-      - name: Notify Vercel
-        if: always()
-        uses: vercel/repository-dispatch/actions/status@v1
-        with:
-          name: Vercel - cashflow: tests
-          status: ${{ job.status }}
-      
       - name: Upload test results (if any)
         if: always()
         uses: actions/upload-artifact@v4
