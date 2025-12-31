@@ -114,13 +114,13 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
   }
 
   // Start Next.js server with test database
+  // Note: Next.js dev server requires -p flag for port, PORT env var is not respected
   const baseUrl = `http://localhost:${port}`
   
-  serverProcess = spawn('npm', ['run', 'dev'], {
+  serverProcess = spawn('npx', ['next', 'dev', '-p', port.toString()], {
     env: {
       ...process.env,
       DATABASE_URL: databaseUrl,
-      PORT: port.toString(),
       NODE_ENV: 'test',
       TEST_MODE: 'true', // Additional flag for test mode detection
     },
