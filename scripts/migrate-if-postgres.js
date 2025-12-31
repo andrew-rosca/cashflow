@@ -98,14 +98,19 @@ if (isPostgres) {
       console.log(migrationOutput);
       migrationSucceeded = true;
     } catch (migrateError) {
-      // Get error output
-      const errorOutput = migrateError.stdout?.toString() || migrateError.stderr?.toString() || migrateError.message || '';
-      console.log(errorOutput);
+      // Get error output - Prisma errors are in stdout
+      const stdout = migrateError.stdout?.toString() || '';
+      const stderr = migrateError.stderr?.toString() || '';
+      const errorOutput = stdout + stderr + (migrateError.message || '');
+      
+      // Print the error output
+      if (stdout) console.log(stdout);
+      if (stderr) console.error(stderr);
       
       // Check if it's a P3005 error (schema not empty)
       const isP3005 = errorOutput.includes('P3005') || 
                       errorOutput.includes('database schema is not empty') ||
-                      migrateError.message?.includes('P3005');
+                      errorOutput.includes('schema is not empty');
       
       if (isP3005) {
         console.log('   Database schema exists but migration history is missing.');
