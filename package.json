@@ -18,7 +18,9 @@
     "db:studio": "prisma studio",
     "db:generate": "node scripts/switch-schema.js && prisma generate",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed:user-only": "tsx prisma/seed.ts --user-only"
+    "db:seed:user-only": "tsx prisma/seed.ts --user-only",
+    "db:seed:user": "tsx scripts/seed-for-current-user.ts",
+    "db:list-users": "tsx scripts/list-users.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

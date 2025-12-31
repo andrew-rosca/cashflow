@@ -3,54 +3,35 @@ import { today } from '../src/lib/logical-date'
 
 const prisma = new PrismaClient()
 
+/**
+ * Seed data for the currently signed-in user
+ * 
+ * Usage: 
+ * 1. Sign in to the app first
+ * 2. Get your user ID from the database or session
+ * 3. Run: USER_ID="your-user-id" tsx scripts/seed-for-current-user.ts
+ * 
+ * Or run without USER_ID to seed for user-1 (demo user)
+ */
+
 async function main() {
-  // Check if we should seed only the user (no accounts/transactions)
-  const seedUserOnly = process.argv.includes('--user-only') || process.env.SEED_USER_ONLY === 'true'
-
-  if (seedUserOnly) {
-    console.log('🌱 Seeding database with user only...')
-  } else {
-    console.log('🌱 Seeding database with sample data...')
-  }
-
-  // Get user ID from environment variable, or default to 'user-1' for demo
-  const targetUserId = process.env.USER_ID || 'user-1'
+  const userId = process.env.USER_ID || 'user-1'
   
-  // Try to find existing user, or create demo user if USER_ID not specified
-  let user
-  if (targetUserId === 'user-1' && !process.env.USER_ID) {
-    // Create/update demo user
-    user = await prisma.user.upsert({
-      where: { id: 'user-1' },
-      update: {},
-      create: {
-        id: 'user-1',
-        email: 'demo@cashflow.app',
-        name: 'Demo User',
-      },
-    })
-    console.log('✅ Using demo user:', user.email)
-  } else {
-    // Find the specified user
-    user = await prisma.user.findUnique({
-      where: { id: targetUserId },
-    })
-    
-    if (!user) {
-      console.error(`❌ User with ID "${targetUserId}" not found.`)
-      console.error('   Please sign in first, or check your user ID.')
-      console.error('   Run: tsx scripts/list-users.ts to see all users')
-      process.exit(1)
-    }
-    console.log(`✅ Found user: ${user.email || user.name || targetUserId}`)
+  console.log(`🌱 Seeding database for user: ${userId}`)
+
+  // Check if user exists
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  })
+
+  if (!user) {
+    console.error(`❌ User with ID "${userId}" not found.`)
+    console.error('   Please sign in first, or use an existing user ID.')
+    console.error('   To find your user ID, check the User table in the database.')
+    process.exit(1)
   }
 
-  // If user-only mode, exit early
-  if (seedUserOnly) {
-    console.log('\n🎉 User seeding complete!')
-    console.log('✨ User created: demo@cashflow.app')
-    return
-  }
+  console.log(`✅ Found user: ${user.email || user.name || userId}`)
 
   // Clear existing data for this user
   await prisma.transaction.deleteMany({ where: { userId: user.id } })
@@ -259,13 +240,7 @@ async function main() {
 
   console.log('\n🎉 Seeding complete!')
   console.log('📊 Created 3 accounts (Main Checking, Income, Expenses)')
-  console.log('💰 Created 6 recurring transactions:')
-  console.log('   - Paycheck (bi-weekly, $3,200)')
-  console.log('   - Rent (monthly, $1,950)')
-  console.log('   - Car Payment (monthly, $420)')
-  console.log('   - Utilities (monthly, $180)')
-  console.log('   - Credit Card (monthly, $550)')
-  console.log('   - Groceries (weekly, $120)')
+  console.log('💰 Created 6 recurring transactions')
   console.log('💸 Created 3 one-time transactions:')
   console.log('   - Car Insurance ($650)')
   console.log('   - Medical Bill ($280)')
@@ -274,7 +249,7 @@ async function main() {
   console.log('   After first paycheck on day 10 ($3,200), expenses accumulate (rent $1,950, insurance $650,')
   console.log('   medical $280, home repair $800) totaling $3,680, pushing balance negative before')
   console.log('   next paycheck on day 24, demonstrating early warning.')
-  console.log('\n✨ You can now view the app with sample data at http://localhost:3000')
+  console.log('\n✨ Refresh the app to see the seeded data')
 }
 
 main()
@@ -285,3 +260,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
+

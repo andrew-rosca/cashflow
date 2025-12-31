@@ -31,8 +31,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - login (login page)
+     * - Static assets in public folder (images, etc. - files with extensions)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|login).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|login|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|json|woff|woff2|ttf|eot)).*)',
   ],
 }
 
