@@ -221,7 +221,7 @@ All endpoints:
 - `src/app/api/transactions/[id]/route.ts` - Single transaction API
 - `src/app/api/projections/route.ts` - Projection calculation API (stub)
 - `init.sh` - Setup and development start script
-- `docs/feature_list.json` - 83 features defined across 17 priority levels
+- `docs/feature_list.json` - 92 features defined across 18 priority levels
 - `docs/specification.md` - Complete project requirements
 - `docs/coder-instructions.md` - Guidelines for coding sessions
 - `docs/initializer-instructions.md` - Setup guidelines
@@ -305,7 +305,7 @@ When working on features:
 5. **Update this file** - Log decisions, issues, progress
 6. **Leave it working** - Every session should end with a runnable app
 
-Current feature status: 13/83 complete (15.7%)
+Current feature status: 64/92 complete (69.6%)
 
 ---
 
@@ -820,7 +820,7 @@ Current feature status: 13/83 complete (15.7%)
 3. Consider responsive design improvements (F039)
 4. Add loading states and success feedback (F051-F053)
 
-**Progress: 36/83 features complete (43.4%)**
+**Progress: 36/92 features complete (39.1%)**
 
 ---
 
@@ -873,6 +873,56 @@ Current feature status: 13/83 complete (15.7%)
 - `src/components/DateInput.tsx`
 
 **Commit:** `6c9ae6c` - "Fix date handling: use UTC consistently and fix state race condition"
+
+---
+
+### Session 10 - UI Enhancements and Settings (Date TBD)
+
+**Status**: Additional UI features and user settings complete
+
+**Completed Features:**
+- ✅ F042: Input validation and error handling for transactions
+- ✅ F086: Settings dialog with sign out functionality
+- ✅ F087: Projection table row expansion with transaction details
+- ✅ F088: Negative balance highlighting in projection table
+- ✅ F089: Balance change indicators (arrows) in projection table
+- ✅ F090: Transaction tooltips with recurrence information
+
+**Changes Made:**
+
+1. **User Settings API** (`src/app/api/user/settings/route.ts`)
+   - GET endpoint to retrieve user preferences
+   - PUT endpoint to update user preferences
+   - Supports `formatNumbersWithoutDecimals` preference
+   - Handles both SQLite (string) and PostgreSQL (JSON) storage formats
+
+2. **Number Formatting Preference**
+   - Users can toggle between decimal and whole number formatting
+   - Preference stored in user account preferences JSON field
+   - Applied consistently across all number displays (balances, amounts, projections)
+   - Settings dialog includes toggle for this preference
+
+3. **Projection Table Enhancements**
+   - Row expansion shows transaction details for each date
+   - Negative balances highlighted in orange
+   - Balance change indicators (green up arrow, red down arrow)
+   - Transaction tooltips show account name and recurrence pattern
+
+4. **Transaction Validation**
+   - Client-side validation for transaction forms
+   - Validates from/to accounts, amounts, dates, settlement days
+   - Prevents same account for from/to
+   - Validates recurring transaction fields
+
+**What Works:**
+- User settings are persisted and loaded on app start
+- Number formatting preference applies to all displays
+- Projection table is interactive with expandable rows
+- Visual indicators for balance changes and negative balances
+- Transaction tooltips provide helpful context
+- Settings dialog accessible from sidebar
+
+**Progress: 64/92 features complete (69.6%)**
 
 ---
 
