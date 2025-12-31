@@ -123,6 +123,9 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
       DATABASE_URL: databaseUrl,
       NODE_ENV: 'test',
       TEST_MODE: 'true', // Additional flag for test mode detection
+      // NextAuth requires these for the server to start properly
+      NEXTAUTH_URL: baseUrl,
+      NEXTAUTH_SECRET: 'test-secret-for-ci-' + Date.now(), // Unique secret for each test run
     },
     stdio: 'pipe',
     shell: true,
