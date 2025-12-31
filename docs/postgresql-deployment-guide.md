@@ -130,7 +130,7 @@ vercel --prod
 
 ## Step 5: Run Database Migrations
 
-After first deployment, you need to run Prisma migrations to create the database schema:
+After first deployment, you need to run Prisma migrations to create/update the database schema:
 
 ### Option A: Using Vercel CLI (Recommended)
 
@@ -154,8 +154,8 @@ export $(cat .env.production | grep -v '^#' | xargs)
 # Generate Prisma client with PostgreSQL schema
 npm run db:generate
 
-# Push schema to production database
-npm run db:push
+# Deploy migrations to production database
+npm run db:migrate:deploy
 ```
 
 ### Option B: Manual Migration
@@ -164,9 +164,17 @@ npm run db:push
 2. Copy the `DATABASE_URL` value
 3. Run locally with that connection string:
    ```bash
-   DATABASE_URL="your-postgresql-url" npm run db:generate
-   DATABASE_URL="your-postgresql-url" npm run db:push
+   export DATABASE_URL="your-postgresql-url"
+   npm run db:generate
+   npm run db:migrate:deploy
    ```
+
+### Migration vs db push
+
+- **`npm run db:migrate:deploy`** (Recommended for production): Uses Prisma migrations for version-controlled, reversible schema changes
+- **`npm run db:push`**: Directly pushes schema changes (faster but not version-controlled)
+
+For production, always use `db:migrate:deploy` to ensure migrations are tracked and can be reviewed.
 
 ## Step 6: Verify Deployment
 
@@ -200,7 +208,8 @@ The project uses automatic schema switching based on `DATABASE_URL`:
 
 The switching happens automatically in:
 - `npm run build` (production builds)
-- `npm run db:push` (schema migrations)
+- `npm run db:push` (local schema changes)
+- `npm run db:migrate:deploy` (production migrations)
 - `npm run db:generate` (Prisma client generation)
 
 ### For Local Development:
@@ -220,7 +229,7 @@ export DATABASE_URL="postgresql://user:password@host:port/database"
 
 # Schema switches to PostgreSQL automatically
 npm run db:generate
-npm run db:push
+npm run db:migrate:deploy  # Use migrations for production
 ```
 
 ## Troubleshooting
