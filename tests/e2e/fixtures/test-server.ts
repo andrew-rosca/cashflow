@@ -40,6 +40,14 @@ export async function startTestServer(port: number = 3000): Promise<TestServer> 
   try {
     // Push schema to the test database using Prisma CLI
     // This must happen before any PrismaClient is instantiated
+    // First, switch to the correct schema (SQLite for tests)
+    execSync(`node scripts/switch-schema.js`, {
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+      stdio: 'pipe',
+      cwd: process.cwd(),
+    })
+    
+    // Now push the schema
     execSync(`npx prisma db push --skip-generate --accept-data-loss --force-reset`, {
       env: { ...process.env, DATABASE_URL: databaseUrl },
       stdio: 'pipe',

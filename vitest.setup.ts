@@ -19,12 +19,22 @@ beforeAll(async () => {
   // Create a unique test database path
   testDbPath = join(tmpdir(), `cashflow-test-${Date.now()}-${Math.random().toString(36).substring(7)}.db`)
   
-  // Set DATABASE_URL for tests only
+  // Set DATABASE_URL for tests only (SQLite for tests)
   process.env.DATABASE_URL = `file:${testDbPath}`
   
   // Push schema to the test database using Prisma CLI
   // This must happen before any PrismaClient is instantiated
+  // First, switch to the correct schema (SQLite for tests)
+  // Then push the schema
   try {
+    // Switch schema to SQLite (tests use SQLite)
+    execSync(`node scripts/switch-schema.js`, {
+      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+      stdio: 'pipe', // Suppress output but allow errors
+      cwd: process.cwd(),
+    })
+    
+    // Now push the schema
     execSync(`npx prisma db push --skip-generate --accept-data-loss --force-reset`, {
       env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
       stdio: 'pipe', // Suppress output but allow errors
