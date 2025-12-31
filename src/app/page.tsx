@@ -77,12 +77,16 @@ export default function Home() {
   const [rawInputError, setRawInputError] = useState<string | null>(null)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   
+  // Number formatting preference (stored in user account)
+  const [formatNumbersWithoutDecimals, setFormatNumbersWithoutDecimals] = useState(false)
+  
   // Expanded rows state (track by date string)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
-  // Load accounts first
+  // Load accounts and user settings first
   useEffect(() => {
     loadAccounts()
+    loadUserSettings()
   }, [])
 
   // Load transactions after accounts are loaded (so we can use earliest balanceAsOf date)
@@ -138,6 +142,26 @@ export default function Home() {
       setAccounts(trackedAccounts)
     } catch (error) {
       console.error('Failed to load accounts:', error)
+    }
+  }
+
+  const loadUserSettings = async () => {
+    try {
+      const response = await fetch('/api/user/settings')
+      if (!response.ok) {
+        // If unauthorized or not found, use default settings (don't log error)
+        if (response.status === 401 || response.status === 404) {
+          setFormatNumbersWithoutDecimals(false)
+          return
+        }
+        console.error('Failed to load user settings:', response.status, response.statusText)
+        return
+      }
+      const data = await response.json()
+      setFormatNumbersWithoutDecimals(data.formatNumbersWithoutDecimals ?? false)
+    } catch (error) {
+      // On error, use default settings (don't log - might be expected in some cases)
+      setFormatNumbersWithoutDecimals(false)
     }
   }
 
@@ -557,7 +581,29 @@ export default function Home() {
 
   // Format helpers
   const formatNumber = (amount: number) => {
-    return amount.toFixed(2)
+    const rounded = formatNumbersWithoutDecimals ? Math.round(amount) : amount
+    const formatted = formatNumbersWithoutDecimals 
+      ? rounded.toLocaleString('en-US', { maximumFractionDigits: 0 })
+      : rounded.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return formatted
+  }
+  
+  const handleFormatPreferenceChange = async (value: boolean) => {
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formatNumbersWithoutDecimals: value }),
+      })
+      if (!response.ok) {
+        console.error('Failed to update user settings:', response.status, response.statusText)
+        return
+      }
+      const data = await response.json()
+      setFormatNumbersWithoutDecimals(data.formatNumbersWithoutDecimals)
+    } catch (error) {
+      console.error('Error updating user settings:', error)
+    }
   }
 
   const formatDate = (dateStr: string | LogicalDate) => {
@@ -1767,6 +1813,33 @@ export default function Home() {
               </div>
               
               <div className="space-y-4">
+                {/* Number Formatting Option */}
+                <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-md">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">
+                      Format numbers without decimals
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Round values and use comma separators
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleFormatPreferenceChange(!formatNumbersWithoutDecimals)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      formatNumbersWithoutDecimals ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    }`}
+                    role="switch"
+                    aria-checked={formatNumbersWithoutDecimals}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        formatNumbersWithoutDecimals ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
                 <button
                   type="button"
                   onClick={async () => {

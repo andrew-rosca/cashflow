@@ -13,6 +13,7 @@ model User {
   name          String?
   emailVerified DateTime?
   image         String?
+  preferences   Json?     // User preferences stored as JSON
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
