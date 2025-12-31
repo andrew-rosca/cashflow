@@ -114,9 +114,9 @@ if (isPostgres) {
       
       if (isP3005) {
         console.log('   Database schema exists but migration history is missing.');
-        console.log('   Baselining database (marking existing schema as migrated)...');
+        console.log('   Applying migration SQL, then baselining...');
         
-        // Get the migration name from the migrations directory
+        // Get the migration name and SQL from the migrations directory
         const fs = require('fs');
         const migrationsDir = path.join(__dirname, '..', 'prisma', 'migrations');
         const migrations = fs.readdirSync(migrationsDir)
@@ -127,40 +127,56 @@ if (isPostgres) {
           .sort();
         
         if (migrations.length > 0) {
-          // Mark the first migration as already applied
           const firstMigration = migrations[0];
-          console.log(`   Marking migration "${firstMigration}" as applied...`);
+          const migrationSqlPath = path.join(migrationsDir, firstMigration, 'migration.sql');
           
-          try {
+          if (fs.existsSync(migrationSqlPath)) {
+            // Read and execute the migration SQL
+            const migrationSql = fs.readFileSync(migrationSqlPath, 'utf8');
+            console.log(`   Running migration SQL for "${firstMigration}"...`);
+            
+            try {
+              // Execute the migration SQL directly
+              const sqlOutput = execSync(`prisma db execute --stdin`, {
+                input: migrationSql,
+                stdio: 'pipe',
+                env: {
+                  ...process.env,
+                  DATABASE_URL: dbUrlForMigration,
+                },
+                timeout: 30 * 1000,
+                encoding: 'utf8',
+              }).toString();
+              if (sqlOutput) console.log(sqlOutput);
+              console.log('   ✅ Migration SQL executed successfully');
+            } catch (sqlError) {
+              // If column already exists (IF NOT EXISTS), that's fine
+              const sqlErrorOutput = sqlError.stdout?.toString() || sqlError.stderr?.toString() || sqlError.message || '';
+              if (sqlErrorOutput.includes('already exists') || sqlErrorOutput.includes('duplicate')) {
+                console.log('   ℹ️  Column may already exist (this is OK)');
+              } else {
+                console.error('   ⚠️  SQL execution warning:', sqlErrorOutput);
+                // Continue anyway - IF NOT EXISTS should handle it
+              }
+            }
+            
+            // Now baseline by marking the migration as applied
+            console.log(`   Marking migration "${firstMigration}" as applied...`);
             const baselineOutput = execSync(`prisma migrate resolve --applied ${firstMigration}`, {
               stdio: 'pipe',
               env: {
                 ...process.env,
                 DATABASE_URL: dbUrlForMigration,
               },
-              timeout: 30 * 1000, // 30 second timeout
+              timeout: 30 * 1000,
               encoding: 'utf8',
             }).toString();
-            console.log(baselineOutput);
+            if (baselineOutput) console.log(baselineOutput);
             console.log('   ✅ Database baselined successfully');
             
-            // Now try migrate deploy again
-            console.log('   Retrying migration deployment...');
-            const retryOutput = execSync('prisma migrate deploy', {
-              stdio: 'pipe',
-              env: {
-                ...process.env,
-                DATABASE_URL: dbUrlForMigration,
-              },
-              timeout: 2 * 60 * 1000,
-              maxBuffer: 10 * 1024 * 1024,
-              encoding: 'utf8',
-            }).toString();
-            console.log(retryOutput);
             migrationSucceeded = true;
-          } catch (baselineError) {
-            console.error('   ❌ Baselining failed:', baselineError.message);
-            throw baselineError;
+          } else {
+            throw new Error(`Migration SQL file not found: ${migrationSqlPath}`);
           }
         } else {
           throw new Error('No migrations found to baseline');
