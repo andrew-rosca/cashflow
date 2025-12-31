@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserId } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+// Force dynamic rendering - this route uses authentication headers
+export const dynamic = 'force-dynamic'
+
 type UserPreferences = {
   formatNumbersWithoutDecimals?: boolean
   [key: string]: any // Allow for future preferences

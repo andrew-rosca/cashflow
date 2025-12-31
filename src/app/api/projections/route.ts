@@ -3,6 +3,9 @@ import { PrismaDataAdapter } from '@/lib/prisma-adapter'
 import { LogicalDate } from '@/lib/logical-date'
 import { getCurrentUserId } from '@/lib/auth'
 
+// Force dynamic rendering - this route uses authentication headers
+export const dynamic = 'force-dynamic'
+
 // In test mode, create fresh adapter on each request to avoid caching issues
 // In production, we'd use the singleton for performance
 function getDataAdapter() {
