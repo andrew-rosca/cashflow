@@ -938,6 +938,22 @@ export default function Home() {
         return true
       }
 
+      // For monthly recurring with dayOfMonth, check if target date matches current month before advancing
+      if (frequency === 'monthly' && dayOfMonth !== undefined && dayOfMonth !== null) {
+        const daysInCurrentMonth = currentDate.daysInMonth
+        const daysToCheck = Array.isArray(dayOfMonth) ? dayOfMonth : [dayOfMonth]
+        if (currentDate.year === targetDate.year && currentDate.month === targetDate.month) {
+          const targetDay = Math.min(targetDate.day, daysInCurrentMonth)
+          if (daysToCheck.some(day => {
+            const dayNum = typeof day === 'string' ? parseInt(day, 10) : day
+            if (isNaN(dayNum) || !isFinite(dayNum)) return false
+            return Math.min(dayNum, daysInCurrentMonth) === targetDay
+          })) {
+            return true
+          }
+        }
+      }
+
       // Calculate next occurrence
       switch (frequency) {
         case 'daily':
