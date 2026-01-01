@@ -73,6 +73,16 @@ export class LogicalDate {
    * Create a LogicalDate from year, month, day
    */
   static from(year: number, month: number, day: number): LogicalDate {
+    // Validate inputs to prevent RangeError
+    if (typeof year !== 'number' || isNaN(year) || !isFinite(year)) {
+      throw new RangeError(`Invalid year value: ${year}`)
+    }
+    if (typeof month !== 'number' || isNaN(month) || !isFinite(month)) {
+      throw new RangeError(`Invalid month value: ${month}`)
+    }
+    if (typeof day !== 'number' || isNaN(day) || !isFinite(day)) {
+      throw new RangeError(`Invalid day value: ${day}`)
+    }
     return new LogicalDate(Temporal.PlainDate.from({ year, month, day }))
   }
 

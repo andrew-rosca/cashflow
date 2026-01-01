@@ -1,18 +1,36 @@
 import { PrismaClient } from '@prisma/client'
 
 // Helper to convert dayOfMonth to database format
-function dayOfMonthToDbValue(dayOfMonth: number | undefined): any {
+function dayOfMonthToDbValue(dayOfMonth: number | number[] | undefined): any {
   if (dayOfMonth === undefined) return null
+  const array = Array.isArray(dayOfMonth) ? dayOfMonth : [dayOfMonth]
   
   const dbUrl = process.env.DATABASE_URL || ''
   const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
   
   if (isPostgres) {
     // PostgreSQL: return as JSON array
-    return [dayOfMonth]
+    return array
   } else {
     // SQLite: return as JSON string
-    return JSON.stringify([dayOfMonth])
+    return JSON.stringify(array)
+  }
+}
+
+// Helper to convert dayOfWeek to database format
+function dayOfWeekToDbValue(dayOfWeek: number | number[] | undefined): any {
+  if (dayOfWeek === undefined) return null
+  const array = Array.isArray(dayOfWeek) ? dayOfWeek : [dayOfWeek]
+  
+  const dbUrl = process.env.DATABASE_URL || ''
+  const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
+  
+  if (isPostgres) {
+    // PostgreSQL: return as JSON array
+    return array
+  } else {
+    // SQLite: return as JSON string
+    return JSON.stringify(array)
   }
 }
 import { today } from '@/lib/logical-date'
@@ -127,8 +145,8 @@ export async function createTestRecurringTransaction(
     date?: string
     description?: string
     frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
-    dayOfWeek?: number
-    dayOfMonth?: number
+    dayOfWeek?: number | number[]
+    dayOfMonth?: number | number[]
     interval?: number
     endDate?: string
     occurrences?: number
@@ -151,7 +169,7 @@ export async function createTestRecurringTransaction(
     data: {
       transactionId: transaction.id,
       frequency: options.frequency,
-      dayOfWeek: options.dayOfWeek,
+      dayOfWeek: dayOfWeekToDbValue(options.dayOfWeek),
       dayOfMonth: dayOfMonthToDbValue(options.dayOfMonth),
       interval: options.interval,
       endDate: options.endDate,

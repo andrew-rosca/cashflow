@@ -13,6 +13,20 @@ function dayOfMonthToDbValue(dayOfMonth: number): any {
     return JSON.stringify([dayOfMonth])
   }
 }
+
+// Helper to convert dayOfWeek to database format
+function dayOfWeekToDbValue(dayOfWeek: number): any {
+  const dbUrl = process.env.DATABASE_URL || ''
+  const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
+  
+  if (isPostgres) {
+    // PostgreSQL: return as JSON array
+    return [dayOfWeek]
+  } else {
+    // SQLite: return as JSON string
+    return JSON.stringify([dayOfWeek])
+  }
+}
 import { today } from '../src/lib/logical-date'
 
 const prisma = new PrismaClient()
@@ -205,7 +219,7 @@ async function main() {
         create: {
           frequency: 'weekly',
           interval: 1,
-          dayOfWeek: 5, // Friday
+          dayOfWeek: dayOfWeekToDbValue(5), // Friday
         },
       },
     },

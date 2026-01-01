@@ -25,8 +25,8 @@ interface Transaction {
   settlementDays?: number
   recurrence?: {
     frequency: string
-    dayOfWeek?: number
-    dayOfMonth?: number
+    dayOfWeek?: number | number[]
+    dayOfMonth?: number | number[]
     interval?: number
     endDate?: string
     occurrences?: number
@@ -44,6 +44,14 @@ export default function Home() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [projections, setProjections] = useState<ProjectionData[]>([])
+  const redirectingToLoginRef = useRef(false)
+  const redirectToLogin = () => {
+    if (redirectingToLoginRef.current) return
+    if (typeof window === 'undefined') return
+    redirectingToLoginRef.current = true
+    const callbackUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    window.location.href = `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
+  }
   
   // Inline editing state
   const [editingCell, setEditingCell] = useState<string | null>(null)
@@ -103,6 +111,10 @@ export default function Home() {
       setRawInputLoading(true)
       fetch('/api/transactions/bulk')
         .then(response => {
+          if (response.status === 401) {
+            redirectToLogin()
+            throw new Error('Unauthorized')
+          }
           if (!response.ok) {
             throw new Error('Failed to export transactions')
           }
@@ -128,6 +140,10 @@ export default function Home() {
   const loadAccounts = async () => {
     try {
       const response = await fetch('/api/accounts')
+      if (response.status === 401) {
+        redirectToLogin()
+        return
+      }
       if (!response.ok) {
         console.error('Failed to load accounts:', response.status, response.statusText)
         return
@@ -148,9 +164,13 @@ export default function Home() {
   const loadUserSettings = async () => {
     try {
       const response = await fetch('/api/user/settings')
+      if (response.status === 401) {
+        redirectToLogin()
+        return
+      }
       if (!response.ok) {
         // If unauthorized or not found, use default settings (don't log error)
-        if (response.status === 401 || response.status === 404) {
+        if (response.status === 404) {
           setFormatNumbersWithoutDecimals(false)
           return
         }
@@ -186,6 +206,10 @@ export default function Home() {
       const response = await fetch(
         `/api/transactions?startDate=${startDate.toString()}&endDate=${futureDate.toString()}`
       )
+      if (response.status === 401) {
+        redirectToLogin()
+        return
+      }
       if (!response.ok) {
         console.error('Failed to load transactions:', response.status, response.statusText)
         return
@@ -236,6 +260,10 @@ export default function Home() {
             cache: 'no-store',
           }
         )
+        if (response.status === 401) {
+          redirectToLogin()
+          return
+        }
         if (!response.ok) {
           console.error(`Failed to load projections for account ${account.id}:`, response.status, response.statusText)
           continue
@@ -645,6 +673,83 @@ export default function Home() {
 
   // Calculate transaction amount for display
   // Display the amount exactly as stored - preserve user's intent
+  // Helper to format dayOfMonth for display
+  const formatDayOfMonth = (dayOfMonth: number | number[] | undefined): string => {
+    if (!dayOfMonth) return ''
+    if (Array.isArray(dayOfMonth)) {
+      if (dayOfMonth.length === 0) return ''
+      if (dayOfMonth.length === 1) return dayOfMonth[0].toString()
+      return dayOfMonth.join(', ')
+    }
+    return dayOfMonth.toString()
+  }
+
+  // Helper to get first day of month (for calculations that need a single day)
+  const getFirstDayOfMonth = (dayOfMonth: number | number[] | string | undefined): number | undefined => {
+    if (!dayOfMonth) return undefined
+    
+    // Handle string (legacy format or API returning string)
+    if (typeof dayOfMonth === 'string') {
+      const num = parseInt(dayOfMonth, 10)
+      if (isNaN(num) || !isFinite(num)) return undefined
+      return num
+    }
+    
+    if (Array.isArray(dayOfMonth)) {
+      if (dayOfMonth.length === 0) return undefined
+      const first = dayOfMonth[0]
+      // Handle string in array
+      if (typeof first === 'string') {
+        const num = parseInt(first, 10)
+        if (isNaN(num) || !isFinite(num)) return undefined
+        return num
+      }
+      if (typeof first !== 'number' || isNaN(first) || !isFinite(first)) return undefined
+      return first
+    }
+    if (typeof dayOfMonth !== 'number' || isNaN(dayOfMonth) || !isFinite(dayOfMonth)) return undefined
+    return dayOfMonth
+  }
+
+  // Helper to format dayOfWeek for display
+  const formatDayOfWeek = (dayOfWeek: number | number[] | undefined): string => {
+    if (!dayOfWeek) return ''
+    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    if (Array.isArray(dayOfWeek)) {
+      if (dayOfWeek.length === 0) return ''
+      if (dayOfWeek.length === 1) return DAY_NAMES[dayOfWeek[0]] || dayOfWeek[0].toString()
+      return dayOfWeek.map(d => DAY_NAMES[d] || d.toString()).join(', ')
+    }
+    return DAY_NAMES[dayOfWeek] || dayOfWeek.toString()
+  }
+
+  // Helper to get first day of week (for calculations that need a single day)
+  const getFirstDayOfWeek = (dayOfWeek: number | number[] | string | undefined): number | undefined => {
+    if (!dayOfWeek) return undefined
+    
+    // Handle string (legacy format or API returning string)
+    if (typeof dayOfWeek === 'string') {
+      const num = parseInt(dayOfWeek, 10)
+      if (isNaN(num) || !isFinite(num)) return undefined
+      return num
+    }
+    
+    if (Array.isArray(dayOfWeek)) {
+      if (dayOfWeek.length === 0) return undefined
+      const first = dayOfWeek[0]
+      // Handle string in array
+      if (typeof first === 'string') {
+        const num = parseInt(first, 10)
+        if (isNaN(num) || !isFinite(num)) return undefined
+        return num
+      }
+      if (typeof first !== 'number' || isNaN(first) || !isFinite(first)) return undefined
+      return first
+    }
+    if (typeof dayOfWeek !== 'number' || isNaN(dayOfWeek) || !isFinite(dayOfWeek)) return undefined
+    return dayOfWeek
+  }
+
   // Format tooltip text for transaction icon
   const getTransactionTooltip = (tx: Transaction): string => {
     // Get account name - use fromAccount (primary account for the transaction)
@@ -652,7 +757,7 @@ export default function Home() {
     const accountName = account?.name || 'Unknown Account'
     
     if (tx.recurrence) {
-      const { frequency, interval = 1, dayOfMonth } = tx.recurrence
+      const { frequency, interval = 1, dayOfWeek, dayOfMonth } = tx.recurrence
       let pattern = ''
       
       switch (frequency) {
@@ -660,11 +765,17 @@ export default function Home() {
           pattern = interval === 1 ? 'daily' : `every ${interval} days`
           break
         case 'weekly':
-          pattern = interval === 1 ? 'weekly' : `every ${interval} weeks`
+          if (dayOfWeek) {
+            const dayStr = formatDayOfWeek(dayOfWeek)
+            pattern = interval === 1 ? `weekly on ${dayStr}` : `every ${interval} weeks on ${dayStr}`
+          } else {
+            pattern = interval === 1 ? 'weekly' : `every ${interval} weeks`
+          }
           break
         case 'monthly':
           if (dayOfMonth) {
-            pattern = interval === 1 ? `monthly on day ${dayOfMonth}` : `every ${interval} months on day ${dayOfMonth}`
+            const dayStr = formatDayOfMonth(dayOfMonth)
+            pattern = interval === 1 ? `monthly on day ${dayStr}` : `every ${interval} months on day ${dayStr}`
           } else {
             pattern = interval === 1 ? 'monthly' : `every ${interval} months`
           }
@@ -718,9 +829,16 @@ export default function Home() {
       dateSet.add(p.date)
     })
     // Convert to LogicalDate objects and sort
-    return Array.from(dateSet)
-      .map(d => LogicalDate.fromString(d))
-      .sort((a, b) => a.compare(b))
+    // Defensive: if any projection date is malformed (e.g. YYYY-00-DD), Temporal will throw.
+    const dates: LogicalDate[] = []
+    Array.from(dateSet).forEach((d) => {
+      try {
+        dates.push(LogicalDate.fromString(d))
+      } catch (e) {
+        console.error('Invalid projection date returned from API:', d, e)
+      }
+    })
+    return dates.sort((a, b) => a.compare(b))
   }
 
   // Filter dates to only show rows where balance changes
@@ -782,14 +900,17 @@ export default function Home() {
     
     // For weekly recurrences with dayOfWeek, adjust the start date to the correct day of week
     if (frequency === 'weekly' && dayOfWeek !== undefined && dayOfWeek !== null) {
-      const startDayOfWeek = startDate.dayOfWeek
-      if (startDayOfWeek !== dayOfWeek) {
-        // Find the next occurrence of the target day of week
-        let daysToAdd = dayOfWeek - startDayOfWeek
-        if (daysToAdd < 0) {
-          daysToAdd += 7
+      const firstDay = getFirstDayOfWeek(dayOfWeek)
+      if (firstDay !== undefined) {
+        const startDayOfWeek = startDate.dayOfWeek
+        if (startDayOfWeek !== firstDay) {
+          // Find the next occurrence of the target day of week
+          let daysToAdd = firstDay - startDayOfWeek
+          if (daysToAdd < 0) {
+            daysToAdd += 7
+          }
+          startDate = startDate.addDays(daysToAdd)
         }
-        startDate = startDate.addDays(daysToAdd)
       }
     }
     
@@ -827,15 +948,26 @@ export default function Home() {
           currentDate = currentDate.addDays(7 * interval)
           // If dayOfWeek is specified, adjust to that day of week
           if (dayOfWeek !== undefined && dayOfWeek !== null) {
-            const currentDayOfWeek = currentDate.dayOfWeek
-            let daysToAdd = dayOfWeek - currentDayOfWeek
-            // If the target day is earlier in the week, add 7 days to wrap around
-            if (daysToAdd < 0) {
-              daysToAdd += 7
+            const firstDay = getFirstDayOfWeek(dayOfWeek)
+            if (firstDay !== undefined) {
+              const currentDayOfWeek = currentDate.dayOfWeek
+              let daysToAdd = firstDay - currentDayOfWeek
+              // If the target day is earlier in the week, add 7 days to wrap around
+              if (daysToAdd < 0) {
+                daysToAdd += 7
+              }
+              // If daysToAdd is 0, we're already on the correct day
+              if (daysToAdd > 0) {
+                currentDate = currentDate.addDays(daysToAdd)
+              }
             }
-            // If daysToAdd is 0, we're already on the correct day
-            if (daysToAdd > 0) {
-              currentDate = currentDate.addDays(daysToAdd)
+            // For multiple days, check if target date matches any day in the array
+            const daysToCheck = Array.isArray(dayOfWeek) ? dayOfWeek : [dayOfWeek]
+            if (daysToCheck.includes(targetDate.dayOfWeek) && 
+                currentDate.year === targetDate.year && 
+                currentDate.month === targetDate.month &&
+                Math.abs(currentDate.day - targetDate.day) < 7) {
+              return true
             }
           }
           break
@@ -843,8 +975,26 @@ export default function Home() {
           currentDate = currentDate.addMonths(interval)
           if (dayOfMonth !== undefined && dayOfMonth !== null) {
             const daysInMonth = currentDate.daysInMonth
-            const targetDay = Math.min(dayOfMonth, daysInMonth)
-            currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+            const firstDay = getFirstDayOfMonth(dayOfMonth)
+            if (firstDay !== undefined) {
+              const targetDay = Math.min(firstDay, daysInMonth)
+              // Validate targetDay before creating date
+              if (!isNaN(targetDay) && isFinite(targetDay) && targetDay >= 1 && targetDay <= daysInMonth) {
+                currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+              }
+            }
+            // For multiple days, check if target date matches any day in the array
+            const daysToCheck = Array.isArray(dayOfMonth) ? dayOfMonth : [dayOfMonth]
+            if (currentDate.year === targetDate.year && currentDate.month === targetDate.month) {
+              const targetDay = Math.min(targetDate.day, daysInMonth)
+              if (daysToCheck.some(day => {
+                const dayNum = typeof day === 'string' ? parseInt(day, 10) : day
+                if (isNaN(dayNum) || !isFinite(dayNum)) return false
+                return Math.min(dayNum, daysInMonth) === targetDay
+              })) {
+                return true
+              }
+            }
           }
           break
         case 'yearly':
@@ -934,14 +1084,17 @@ export default function Home() {
     
     // For weekly recurrences with dayOfWeek, adjust the start date to the correct day of week
     if (frequency === 'weekly' && dayOfWeek !== undefined && dayOfWeek !== null) {
-      const startDayOfWeek = currentDate.dayOfWeek
-      if (startDayOfWeek !== dayOfWeek) {
-        // Find the next occurrence of the target day of week
-        let daysToAdd = dayOfWeek - startDayOfWeek
-        if (daysToAdd < 0) {
-          daysToAdd += 7
+      const firstDay = getFirstDayOfWeek(dayOfWeek)
+      if (firstDay !== undefined) {
+        const startDayOfWeek = currentDate.dayOfWeek
+        if (startDayOfWeek !== firstDay) {
+          // Find the next occurrence of the target day of week
+          let daysToAdd = firstDay - startDayOfWeek
+          if (daysToAdd < 0) {
+            daysToAdd += 7
+          }
+          currentDate = currentDate.addDays(daysToAdd)
         }
-        currentDate = currentDate.addDays(daysToAdd)
       }
     }
     
@@ -949,11 +1102,21 @@ export default function Home() {
     // For monthly recurring with dayOfMonth, we need special handling:
     // The dayOfMonth should be used for all occurrences, not the base date's day
     if (frequency === 'monthly' && dayOfMonth !== undefined && dayOfMonth !== null) {
+      // Get the first day for next occurrence calculation
+      const firstDay = getFirstDayOfMonth(dayOfMonth)
+      if (firstDay === undefined) {
+        return LogicalDate.fromString(tx.date)
+      }
+      
       // First, check if the dayOfMonth in the base month is still in the future
       const baseYear = currentDate.year
       const baseMonth = currentDate.month
       const daysInBaseMonth = LogicalDate.from(baseYear, baseMonth, 1).daysInMonth
-      const targetDayInBaseMonth = Math.min(dayOfMonth, daysInBaseMonth)
+      const targetDayInBaseMonth = Math.min(firstDay, daysInBaseMonth)
+      // Validate targetDay before creating date
+      if (isNaN(targetDayInBaseMonth) || !isFinite(targetDayInBaseMonth) || targetDayInBaseMonth < 1 || targetDayInBaseMonth > daysInBaseMonth) {
+        return LogicalDate.fromString(tx.date)
+      }
       let occurrenceDate = LogicalDate.from(baseYear, baseMonth, targetDayInBaseMonth)
       
       // If the occurrence in the base month is in the future, use it
@@ -975,7 +1138,11 @@ export default function Home() {
       
       while (iterations < maxIterations) {
         const daysInMonth = currentDate.daysInMonth
-        const targetDay = Math.min(dayOfMonth, daysInMonth)
+        const targetDay = Math.min(firstDay, daysInMonth)
+        // Validate targetDay before creating date
+        if (isNaN(targetDay) || !isFinite(targetDay) || targetDay < 1 || targetDay > daysInMonth) {
+          break
+        }
         occurrenceDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
         
         // Check if this occurrence is in the future
@@ -1017,16 +1184,34 @@ export default function Home() {
           break
         case 'weekly':
           currentDate = currentDate.addDays(7 * interval)
-          // Note: dayOfWeek is not currently used in weekly recurrences
-          // Weekly recurrences just repeat every N weeks from the start date
+          // If dayOfWeek is specified, adjust to that day of week
+          if (dayOfWeek !== undefined && dayOfWeek !== null) {
+            const firstDay = getFirstDayOfWeek(dayOfWeek)
+            if (firstDay !== undefined) {
+              const currentDayOfWeek = currentDate.dayOfWeek
+              let daysToAdd = firstDay - currentDayOfWeek
+              if (daysToAdd < 0) {
+                daysToAdd += 7
+              }
+              if (daysToAdd > 0) {
+                currentDate = currentDate.addDays(daysToAdd)
+              }
+            }
+          }
           break
         case 'monthly':
           currentDate = currentDate.addMonths(interval)
           if (dayOfMonth !== undefined && dayOfMonth !== null) {
             // Set to specific day of month, handling month-end edge cases
             const daysInMonth = currentDate.daysInMonth
-            const targetDay = Math.min(dayOfMonth, daysInMonth)
-            currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+            const firstDay = getFirstDayOfMonth(dayOfMonth)
+            if (firstDay !== undefined) {
+              const targetDay = Math.min(firstDay, daysInMonth)
+              // Validate targetDay before creating date
+              if (!isNaN(targetDay) && isFinite(targetDay) && targetDay >= 1 && targetDay <= daysInMonth) {
+                currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+              }
+            }
           }
           break
         case 'yearly':

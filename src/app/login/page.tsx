@@ -41,8 +41,23 @@ function LoginForm() {
   const handleSignIn = async (provider: 'google' | 'apple') => {
     try {
       setError(null)
+      // Ensure we always redirect back to the CURRENT origin (localhost in dev).
+      // This avoids accidentally redirecting to production when NEXTAUTH_URL is misconfigured.
+      let safeCallbackUrl = '/'
+      try {
+        const resolved = new URL(callbackUrl, window.location.origin)
+        // If callbackUrl was absolute to some other host, force it back to current origin
+        if (resolved.origin !== window.location.origin) {
+          safeCallbackUrl = new URL(resolved.pathname + resolved.search + resolved.hash, window.location.origin).toString()
+        } else {
+          safeCallbackUrl = resolved.toString()
+        }
+      } catch {
+        safeCallbackUrl = new URL('/', window.location.origin).toString()
+      }
+
       const result = await signIn(provider, {
-        callbackUrl,
+        callbackUrl: safeCallbackUrl,
         redirect: true,
       })
       

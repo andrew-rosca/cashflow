@@ -32,15 +32,14 @@ export const config = {
     /*
      * Match all request paths except for the ones starting with:
      * - api (all API routes - they handle their own authentication)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
+     * - _next (all Next.js internals: static chunks, images, data, etc.)
      * - favicon.ico (favicon file)
      * - login (login page)
      * - privacy (privacy policy page)
      * - terms (terms of service page)
-     * - Static assets in public folder (images, etc. - files with extensions)
+     * - Static assets in public folder (files with extensions)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|login|privacy|terms|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|json|woff|woff2|ttf|eot)).*)',
+    '/((?!api|_next|favicon.ico|login|privacy|terms|.*\\..*).*)',
   ],
 }
 

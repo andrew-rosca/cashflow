@@ -102,7 +102,7 @@ model Recurrence {
   transactionId String   @unique
   frequency    String   // "daily" | "weekly" | "monthly" | "yearly"
   interval     Int?
-  dayOfWeek    Int?     // 0-6
+  dayOfWeek    String?  // JSON string array of integers [0-6] for multiple days of week (e.g., "[1,3]")
   dayOfMonth   String?  // JSON string array of integers [1-31] for multiple days of month (e.g., "[1,15]")
   endDate      String?  // Calendar date (YYYY-MM-DD) - no time component
   occurrences  Int?

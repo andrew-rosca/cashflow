@@ -313,6 +313,60 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       expect(feb7!.balance).toBeLessThan(jan31!.balance)
     })
 
+    it('should appear on multiple days of each week (e.g., Monday and Wednesday)', async () => {
+      // Create weekly recurring on Monday and Wednesday
+      await adapter.createTransaction(TEST_USER_ID, {
+        fromAccountId: salaryAccountId,
+        toAccountId: checkingAccountId,
+        amount: 50,
+        date: LogicalDate.fromString('2025-01-01'), // Wednesday Jan 1, 2025
+        description: 'Bi-weekly payment on Mon/Wed',
+        recurrence: {
+          frequency: 'weekly',
+          dayOfWeek: [1, 3], // Monday and Wednesday
+        },
+      })
+
+      const startDate = LogicalDate.fromString('2025-01-01')
+      const endDate = LogicalDate.fromString('2025-01-31')
+
+      const projections = await adapter.getProjections(TEST_USER_ID, {
+        accountId: checkingAccountId,
+        startDate,
+        endDate,
+      })
+
+      // Mondays and Wednesdays in Jan 2025
+      // Mondays: 6, 13, 20, 27
+      // Wednesdays: 1, 8, 15, 22, 29
+      const jan1 = projections.find(p => p.date.month === 1 && p.date.day === 1) // Wed
+      const jan6 = projections.find(p => p.date.month === 1 && p.date.day === 6) // Mon
+      const jan8 = projections.find(p => p.date.month === 1 && p.date.day === 8) // Wed
+      const jan13 = projections.find(p => p.date.month === 1 && p.date.day === 13) // Mon
+      const jan15 = projections.find(p => p.date.month === 1 && p.date.day === 15) // Wed
+      const jan20 = projections.find(p => p.date.month === 1 && p.date.day === 20) // Mon
+      const jan22 = projections.find(p => p.date.month === 1 && p.date.day === 22) // Wed
+      const jan27 = projections.find(p => p.date.month === 1 && p.date.day === 27) // Mon
+      const jan29 = projections.find(p => p.date.month === 1 && p.date.day === 29) // Wed
+
+      // Payments applied on both days each week
+      expect(jan1).toBeDefined()
+      expect(jan6).toBeDefined()
+      expect(jan8).toBeDefined()
+      expect(jan13).toBeDefined()
+      expect(jan15).toBeDefined()
+      expect(jan20).toBeDefined()
+      expect(jan22).toBeDefined()
+      expect(jan27).toBeDefined()
+      expect(jan29).toBeDefined()
+
+      // Verify balance increases by 50 on each occurrence
+      expect(jan6!.balance).toBe(jan1!.balance + 50) // Mon after first Wed
+      expect(jan8!.balance).toBe(jan6!.balance + 50) // Wed after Mon
+      expect(jan13!.balance).toBe(jan8!.balance + 50) // Mon after Wed
+      expect(jan15!.balance).toBe(jan13!.balance + 50) // Wed after Mon
+    })
+
     it('should continue indefinitely until end date', async () => {
       // Create weekly recurring with end date
       await adapter.createTransaction(TEST_USER_ID, {

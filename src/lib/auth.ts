@@ -19,6 +19,36 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Default NextAuth behavior is based on NEXTAUTH_URL (baseUrl). If NEXTAUTH_URL
+      // is accidentally set to production while running locally, sign-in will redirect
+      // you to prod after auth.
+      //
+      // In dev/test, explicitly allow localhost callback URLs so local testing works
+      // even when NEXTAUTH_URL is misconfigured.
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          // IMPORTANT: In dev, return *relative* redirects as-is so the browser stays
+          // on the current host even if NEXTAUTH_URL is misconfigured to production.
+          if (url.startsWith('/')) return url
+
+          const u = new URL(url)
+          if (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '0.0.0.0') {
+            return url
+          }
+        } catch {
+          // fall through
+        }
+
+        // Fall back to app root on the current host
+        return '/'
+      }
+
+      // Production-safe defaults:
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      if (url.startsWith(baseUrl)) return url
+      return baseUrl
+    },
     async session({ session, user }) {
       // With database sessions, user is provided
       if (session.user && user) {

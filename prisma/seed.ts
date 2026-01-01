@@ -17,6 +17,20 @@ function dayOfMonthToDbValue(dayOfMonth: number): any {
   }
 }
 
+// Helper to convert dayOfWeek to database format
+function dayOfWeekToDbValue(dayOfWeek: number): any {
+  const dbUrl = process.env.DATABASE_URL || ''
+  const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
+  
+  if (isPostgres) {
+    // PostgreSQL: return as JSON array
+    return [dayOfWeek]
+  } else {
+    // SQLite: return as JSON string
+    return JSON.stringify([dayOfWeek])
+  }
+}
+
 async function main() {
   // Check if we should seed only the user (no accounts/transactions)
   const seedUserOnly = process.argv.includes('--user-only') || process.env.SEED_USER_ONLY === 'true'
@@ -224,7 +238,7 @@ async function main() {
         create: {
           frequency: 'weekly',
           interval: 1,
-          dayOfWeek: 5, // Friday
+          dayOfWeek: dayOfWeekToDbValue(5), // Friday
         },
       },
     },
