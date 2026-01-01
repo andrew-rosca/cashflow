@@ -1119,8 +1119,8 @@ export default function Home() {
       }
       let occurrenceDate = LogicalDate.from(baseYear, baseMonth, targetDayInBaseMonth)
       
-      // If the occurrence in the base month is in the future, use it
-      if (occurrenceDate.compare(today) > 0) {
+      // If the occurrence in the base month is today or in the future, use it
+      if (occurrenceDate.compare(today) >= 0) {
         // Check end date
         if (endDate) {
           const endDateObj = LogicalDate.fromString(endDate)
@@ -1145,8 +1145,8 @@ export default function Home() {
         }
         occurrenceDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
         
-        // Check if this occurrence is in the future
-        if (occurrenceDate.compare(today) > 0) {
+        // Check if this occurrence is today or in the future
+        if (occurrenceDate.compare(today) >= 0) {
           // Check end date
           if (endDate) {
             const endDateObj = LogicalDate.fromString(endDate)
