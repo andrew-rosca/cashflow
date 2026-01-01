@@ -42,13 +42,26 @@ function dayOfMonthFromDbValue(dbValue: any): number | number[] | undefined {
   
   // Handle JSON string (SQLite)
   if (typeof dbValue === 'string') {
-    try {
-      const parsed = JSON.parse(dbValue)
-      if (Array.isArray(parsed)) {
-        return parsed.length === 1 ? parsed[0] : parsed
+    // Check if it's a JSON string (starts with '[')
+    const trimmed = dbValue.trim()
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(dbValue)
+        if (Array.isArray(parsed)) {
+          return parsed.length === 1 ? parsed[0] : parsed
+        }
+        // If parsed to a single value, return it
+        if (typeof parsed === 'number') {
+          return parsed
+        }
+      } catch (e) {
+        // If JSON parsing fails, return undefined (don't fall through to parseInt for JSON strings)
+        return undefined
       }
-    } catch (e) {
-      // If parsing fails, try to parse as single number (legacy)
+    }
+    // Try to parse as single number (legacy format or non-JSON string)
+    // Only do this if it doesn't look like JSON
+    if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
       const num = parseInt(dbValue, 10)
       if (!isNaN(num)) return num
     }
@@ -210,7 +223,7 @@ export class PrismaDataAdapter implements DataAdapter {
         frequency: t.recurrence.frequency as any,
         interval: t.recurrence.interval ?? undefined,
         dayOfWeek: t.recurrence.dayOfWeek ?? undefined,
-        dayOfMonth: dayOfMonthFromDbValue(t.recurrence.dayOfMonth),
+        dayOfMonth: dayOfMonthFromDbValue(t.recurrence.dayOfMonth as any),
         endDate: t.recurrence.endDate ? LogicalDate.fromString(t.recurrence.endDate) : undefined,
         occurrences: t.recurrence.occurrences ?? undefined,
       } : undefined,
@@ -282,7 +295,7 @@ export class PrismaDataAdapter implements DataAdapter {
         frequency: created.recurrence.frequency as any,
         interval: created.recurrence.interval ?? undefined,
         dayOfWeek: created.recurrence.dayOfWeek ?? undefined,
-        dayOfMonth: created.recurrence.dayOfMonth ?? undefined,
+        dayOfMonth: dayOfMonthFromDbValue(created.recurrence.dayOfMonth as any),
         endDate: created.recurrence.endDate ? LogicalDate.fromString(created.recurrence.endDate) : undefined,
         occurrences: created.recurrence.occurrences ?? undefined,
       } : undefined,
@@ -347,7 +360,7 @@ export class PrismaDataAdapter implements DataAdapter {
         frequency: updated.recurrence.frequency as any,
         interval: updated.recurrence.interval ?? undefined,
         dayOfWeek: updated.recurrence.dayOfWeek ?? undefined,
-        dayOfMonth: updated.recurrence.dayOfMonth ?? undefined,
+        dayOfMonth: dayOfMonthFromDbValue(updated.recurrence.dayOfMonth as any),
         endDate: updated.recurrence.endDate ? LogicalDate.fromString(updated.recurrence.endDate) : undefined,
         occurrences: updated.recurrence.occurrences ?? undefined,
       } : undefined,
