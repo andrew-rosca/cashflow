@@ -35,7 +35,7 @@ export interface RecurrencePattern {
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
   interval?: number
   dayOfWeek?: number
-  dayOfMonth?: number
+  dayOfMonth?: number | number[]  // Single day or array of days (1-31)
   endDate?: LogicalDate
   occurrences?: number
 }

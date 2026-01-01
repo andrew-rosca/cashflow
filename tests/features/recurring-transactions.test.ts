@@ -177,6 +177,63 @@ describe('Advanced Recurring Transaction Tests (F043-F046)', () => {
       expect(jan25!.balance).toBeGreaterThan(dec25!.balance)
       expect(feb25!.balance).toBeGreaterThan(jan25!.balance)
     })
+
+    it('should appear on multiple days of each month (e.g., 1st and 15th)', async () => {
+      // Create monthly recurring on 1st and 15th of each month
+      await adapter.createTransaction(TEST_USER_ID, {
+        fromAccountId: savingsAccountId,
+        toAccountId: expenseAccountId,
+        amount: 50,
+        date: LogicalDate.fromString('2025-01-01'),
+        description: 'Bi-monthly payment on 1st and 15th',
+        recurrence: {
+          frequency: 'monthly',
+          dayOfMonth: [1, 15],
+        },
+      })
+
+      const startDate = LogicalDate.fromString('2025-01-01')
+      const endDate = LogicalDate.fromString('2025-03-31')
+
+      const projections = await adapter.getProjections(TEST_USER_ID, {
+        accountId: savingsAccountId,
+        startDate,
+        endDate,
+      })
+
+      // Verify payments occur on both 1st and 15th of each month
+      // Start balance is 5000
+      const jan1 = projections.find(p => p.date.month === 1 && p.date.day === 1)
+      const jan2 = projections.find(p => p.date.month === 1 && p.date.day === 2)
+      const jan15 = projections.find(p => p.date.month === 1 && p.date.day === 15)
+      const jan16 = projections.find(p => p.date.month === 1 && p.date.day === 16)
+      const feb1 = projections.find(p => p.date.month === 2 && p.date.day === 1)
+      const feb15 = projections.find(p => p.date.month === 2 && p.date.day === 15)
+      const mar1 = projections.find(p => p.date.month === 3 && p.date.day === 1)
+      const mar15 = projections.find(p => p.date.month === 3 && p.date.day === 15)
+
+      // Payments applied on both days each month
+      expect(jan1!.balance).toBe(4950) // 5000 - 50 (first payment on Jan 1)
+      expect(jan2!.balance).toBe(4950) // Same, no change on 2nd
+      expect(jan15!.balance).toBe(4900) // 4950 - 50 (second payment on Jan 15)
+      expect(jan16!.balance).toBe(4900) // Same, no change on 16th
+
+      // February should have both payments
+      expect(feb1!.balance).toBeLessThan(jan15!.balance) // Third payment
+      expect(feb15!.balance).toBeLessThan(feb1!.balance) // Fourth payment
+
+      // March should have both payments
+      expect(mar1!.balance).toBeLessThan(feb15!.balance) // Fifth payment
+      expect(mar15!.balance).toBeLessThan(mar1!.balance) // Sixth payment
+
+      // Verify all occurrences are present
+      expect(jan1).toBeDefined()
+      expect(jan15).toBeDefined()
+      expect(feb1).toBeDefined()
+      expect(feb15).toBeDefined()
+      expect(mar1).toBeDefined()
+      expect(mar15).toBeDefined()
+    })
   })
 
   describe('F044: Weekly recurring transaction on specific day of week', () => {

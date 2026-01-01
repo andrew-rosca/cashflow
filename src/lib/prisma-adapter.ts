@@ -13,6 +13,55 @@ import type { DataAdapter, Account, Transaction, ProjectionData } from './data-a
 import { LogicalDate } from './logical-date'
 import { Temporal } from '@js-temporal/polyfill'
 
+// Helper functions to convert between array and JSON/String for dayOfMonth
+// PostgreSQL uses Json type, SQLite uses String type
+function dayOfMonthToDbValue(dayOfMonth: number | number[] | undefined, dbUrl?: string): any {
+  if (dayOfMonth === undefined || dayOfMonth === null) return null
+  const array = Array.isArray(dayOfMonth) ? dayOfMonth : [dayOfMonth]
+  
+  // Check if we're using SQLite (String) or PostgreSQL (Json)
+  const isPostgres = dbUrl ? (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) : 
+    (process.env.DATABASE_URL?.startsWith('postgresql://') || process.env.DATABASE_URL?.startsWith('postgres://'))
+  
+  if (isPostgres) {
+    // PostgreSQL: return as JSON array
+    return array
+  } else {
+    // SQLite: return as JSON string
+    return JSON.stringify(array)
+  }
+}
+
+function dayOfMonthFromDbValue(dbValue: any): number | number[] | undefined {
+  if (dbValue === null || dbValue === undefined) return undefined
+  
+  // Handle JSON array (PostgreSQL)
+  if (Array.isArray(dbValue)) {
+    return dbValue.length === 1 ? dbValue[0] : dbValue
+  }
+  
+  // Handle JSON string (SQLite)
+  if (typeof dbValue === 'string') {
+    try {
+      const parsed = JSON.parse(dbValue)
+      if (Array.isArray(parsed)) {
+        return parsed.length === 1 ? parsed[0] : parsed
+      }
+    } catch (e) {
+      // If parsing fails, try to parse as single number (legacy)
+      const num = parseInt(dbValue, 10)
+      if (!isNaN(num)) return num
+    }
+  }
+  
+  // Handle legacy single integer values
+  if (typeof dbValue === 'number') {
+    return dbValue
+  }
+  
+  return undefined
+}
+
 export class PrismaDataAdapter implements DataAdapter {
   private prisma: PrismaClient
 
@@ -161,7 +210,7 @@ export class PrismaDataAdapter implements DataAdapter {
         frequency: t.recurrence.frequency as any,
         interval: t.recurrence.interval ?? undefined,
         dayOfWeek: t.recurrence.dayOfWeek ?? undefined,
-        dayOfMonth: t.recurrence.dayOfMonth ?? undefined,
+        dayOfMonth: dayOfMonthFromDbValue(t.recurrence.dayOfMonth),
         endDate: t.recurrence.endDate ? LogicalDate.fromString(t.recurrence.endDate) : undefined,
         occurrences: t.recurrence.occurrences ?? undefined,
       } : undefined,
@@ -189,7 +238,7 @@ export class PrismaDataAdapter implements DataAdapter {
         frequency: transaction.recurrence.frequency as any,
         interval: transaction.recurrence.interval ?? undefined,
         dayOfWeek: transaction.recurrence.dayOfWeek ?? undefined,
-        dayOfMonth: transaction.recurrence.dayOfMonth ?? undefined,
+        dayOfMonth: dayOfMonthFromDbValue(transaction.recurrence.dayOfMonth),
         endDate: transaction.recurrence.endDate ? LogicalDate.fromString(transaction.recurrence.endDate) : undefined,
         occurrences: transaction.recurrence.occurrences ?? undefined,
       } : undefined,
@@ -211,7 +260,7 @@ export class PrismaDataAdapter implements DataAdapter {
             frequency: transaction.recurrence.frequency,
             interval: transaction.recurrence.interval,
             dayOfWeek: transaction.recurrence.dayOfWeek,
-            dayOfMonth: transaction.recurrence.dayOfMonth,
+            dayOfMonth: dayOfMonthToDbValue(transaction.recurrence.dayOfMonth, this.dbUrl),
             endDate: transaction.recurrence.endDate?.toString(), // Convert LogicalDate to string
             occurrences: transaction.recurrence.occurrences,
           },
@@ -262,7 +311,7 @@ export class PrismaDataAdapter implements DataAdapter {
               frequency: transaction.recurrence.frequency,
               interval: transaction.recurrence.interval ?? null,
               dayOfWeek: transaction.recurrence.dayOfWeek ?? null,
-              dayOfMonth: transaction.recurrence.dayOfMonth ?? null,
+              dayOfMonth: dayOfMonthToDbValue(transaction.recurrence.dayOfMonth, this.dbUrl),
               endDate: transaction.recurrence.endDate ? transaction.recurrence.endDate.toString() : null,
               occurrences: transaction.recurrence.occurrences ?? null,
             },
@@ -270,7 +319,7 @@ export class PrismaDataAdapter implements DataAdapter {
               frequency: transaction.recurrence.frequency,
               interval: transaction.recurrence.interval ?? null,
               dayOfWeek: transaction.recurrence.dayOfWeek ?? null,
-              dayOfMonth: transaction.recurrence.dayOfMonth ?? null,
+              dayOfMonth: dayOfMonthToDbValue(transaction.recurrence.dayOfMonth, this.dbUrl),
               endDate: transaction.recurrence.endDate ? transaction.recurrence.endDate.toString() : null,
               occurrences: transaction.recurrence.occurrences ?? null,
             },
@@ -451,55 +500,94 @@ export class PrismaDataAdapter implements DataAdapter {
 
     let totalCount = 0 // Total occurrences generated (for occurrences limit)
 
-    while (currentDate.compare(effectiveEnd) <= 0) {
-      if (currentDate.compare(startDate) >= 0 && currentDate.compare(endDate) <= 0) {
-        occurrences.push({
-          ...tx,
-          date: currentDate,
-        })
-      }
+    // Special handling for monthly with multiple days
+    if (frequency === 'monthly' && dayOfMonth) {
+      const daysArray = Array.isArray(dayOfMonth) ? dayOfMonth : [dayOfMonth]
+      let monthDate = currentDate
 
-      totalCount++
-      if (maxOccurrences && totalCount >= maxOccurrences) break
+      // For monthly with dayOfMonth, generate all days in each month
+      while (monthDate.compare(effectiveEnd) <= 0 && (!maxOccurrences || totalCount < maxOccurrences)) {
+        const currentMonth = monthDate.month
+        const currentYear = monthDate.year
+        const daysInMonth = LogicalDate.from(currentYear, currentMonth, 1).daysInMonth
 
-      // Calculate next occurrence
-      switch (frequency) {
-        case 'daily':
-          currentDate = currentDate.addDays(interval)
-          break
-        case 'weekly':
-          // Add the interval weeks
-          currentDate = currentDate.addDays(7 * interval)
-          // If dayOfWeek is specified, adjust to that day of week
-          if (dayOfWeek !== undefined && dayOfWeek !== null) {
-            const currentDayOfWeek = currentDate.dayOfWeek
-            let daysToAdd = dayOfWeek - currentDayOfWeek
-            // If the target day is earlier in the week, add 7 days to wrap around
-            if (daysToAdd < 0) {
-              daysToAdd += 7
-            }
-            // If daysToAdd is 0, we're already on the correct day
-            if (daysToAdd > 0) {
-              currentDate = currentDate.addDays(daysToAdd)
-            }
+        // Generate occurrences for all days in the array for this month
+        for (const day of daysArray) {
+          if (maxOccurrences && totalCount >= maxOccurrences) break
+
+          const targetDay = Math.min(day, daysInMonth)
+          const occurrenceDate = LogicalDate.from(currentYear, currentMonth, targetDay)
+
+          // Only include if within the date range
+          if (occurrenceDate.compare(startDate) >= 0 && occurrenceDate.compare(endDate) <= 0 && occurrenceDate.compare(effectiveEnd) <= 0) {
+            occurrences.push({
+              ...tx,
+              date: occurrenceDate,
+            })
+            totalCount++
           }
-          break
-        case 'monthly':
-          currentDate = currentDate.addMonths(interval)
-          if (dayOfMonth) {
-            // Set to specific day of month, handling month-end edge cases
-            const daysInMonth = currentDate.daysInMonth
-            const targetDay = Math.min(dayOfMonth, daysInMonth)
-            currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
-          }
-          break
-        case 'yearly':
-          currentDate = currentDate.addYears(interval)
-          break
-      }
+        }
 
-      // Safety check to prevent infinite loops
-      if (totalCount > 10000) break
+        // Move to next month
+        monthDate = monthDate.addMonths(interval)
+
+        // Safety check
+        if (totalCount > 10000) break
+      }
+    } else {
+      // Standard logic for other frequencies
+      while (currentDate.compare(effectiveEnd) <= 0) {
+        if (currentDate.compare(startDate) >= 0 && currentDate.compare(endDate) <= 0) {
+          occurrences.push({
+            ...tx,
+            date: currentDate,
+          })
+        }
+
+        totalCount++
+        if (maxOccurrences && totalCount >= maxOccurrences) break
+
+        // Calculate next occurrence
+        switch (frequency) {
+          case 'daily':
+            currentDate = currentDate.addDays(interval)
+            break
+          case 'weekly':
+            // Add the interval weeks
+            currentDate = currentDate.addDays(7 * interval)
+            // If dayOfWeek is specified, adjust to that day of week
+            if (dayOfWeek !== undefined && dayOfWeek !== null) {
+              const currentDayOfWeek = currentDate.dayOfWeek
+              let daysToAdd = dayOfWeek - currentDayOfWeek
+              // If the target day is earlier in the week, add 7 days to wrap around
+              if (daysToAdd < 0) {
+                daysToAdd += 7
+              }
+              // If daysToAdd is 0, we're already on the correct day
+              if (daysToAdd > 0) {
+                currentDate = currentDate.addDays(daysToAdd)
+              }
+            }
+            break
+          case 'monthly':
+            currentDate = currentDate.addMonths(interval)
+            if (dayOfMonth) {
+              // Set to specific day of month, handling month-end edge cases
+              const daysInMonth = currentDate.daysInMonth
+              const targetDay = Array.isArray(dayOfMonth)
+                ? Math.min(dayOfMonth[0], daysInMonth)
+                : Math.min(dayOfMonth, daysInMonth)
+              currentDate = LogicalDate.from(currentDate.year, currentDate.month, targetDay)
+            }
+            break
+          case 'yearly':
+            currentDate = currentDate.addYears(interval)
+            break
+        }
+
+        // Safety check to prevent infinite loops
+        if (totalCount > 10000) break
+      }
     }
 
     return occurrences
