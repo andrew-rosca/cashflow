@@ -90,6 +90,9 @@ export default function Home() {
   
   // Expanded rows state (track by date string)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  
+  // Track which transaction is being hovered in expanded projection rows
+  const [hoveredTransactionId, setHoveredTransactionId] = useState<string | null>(null)
 
   // Load accounts and user settings first
   useEffect(() => {
@@ -1384,7 +1387,11 @@ export default function Home() {
                   .map(tx => (
                   <div
                     key={tx.id}
-                    className="flex items-center gap-2 py-1 px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors"
+                    className={`flex items-center gap-2 py-1 px-2 -mx-2 rounded transition-colors ${
+                      hoveredTransactionId === tx.id
+                        ? 'bg-blue-100 dark:bg-blue-900/40'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
                   >
                     {tx.recurrence ? (
                       <>
@@ -1636,6 +1643,8 @@ export default function Home() {
                                       : 'bg-gray-50/40 dark:bg-gray-800/30'
                                   }`} 
                                   data-expanded-row="true"
+                                  onMouseEnter={() => setHoveredTransactionId(transaction.id)}
+                                  onMouseLeave={() => setHoveredTransactionId(null)}
                                 >
                                   <td className="py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px]">
                                     <div className="flex items-center gap-1 pl-6 text-xs">
