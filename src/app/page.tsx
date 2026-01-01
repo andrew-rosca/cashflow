@@ -655,6 +655,15 @@ export default function Home() {
     const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.month - 1]
     return `${monthName} ${date.day}`
   }
+
+  const formatDateWithDayOfWeek = (dateStr: string | LogicalDate) => {
+    // Parse date string to LogicalDate
+    const date = typeof dateStr === 'string' ? LogicalDate.fromString(dateStr) : dateStr
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const dayName = dayNames[date.dayOfWeek - 1] // dayOfWeek is 1-7 (Mon-Sun)
+    const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.month - 1]
+    return `${dayName} ${monthName} ${date.day}`
+  }
   
   // Helper to get date string in YYYY-MM-DD format
   const getDateString = (date: string | LogicalDate): string => {
@@ -1570,7 +1579,7 @@ export default function Home() {
                           onClick={() => toggleRowExpansion(date)}
                         >
                           <td className="py-2 px-4 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap min-w-[200px]">
-                            {formatDate(date)}
+                            {formatDateWithDayOfWeek(date)}
                           </td>
                           {accounts.map(account => {
                             const balance = getProjectedBalance(account.id, date)
