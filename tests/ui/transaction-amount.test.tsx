@@ -5,12 +5,26 @@ import Home from '@/app/page'
 
 // @vitest-environment jsdom
 
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+}
+global.localStorage = localStorageMock as any
+
 // Mock fetch
 global.fetch = vi.fn()
 
 describe('Transaction Amount Input', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset localStorage mock
+    localStorageMock.getItem.mockReturnValue(null)
+    localStorageMock.setItem.mockImplementation(() => {})
+    localStorageMock.removeItem.mockImplementation(() => {})
+    localStorageMock.clear.mockImplementation(() => {})
     // Mock successful API responses
     ;(global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('/api/accounts')) {

@@ -480,13 +480,22 @@ export default function Home() {
       setIsRecurringTransaction(false)
       setTransactionDate(getToday())
       // Set account from localStorage or default to first account
-      const lastAccountId = localStorage.getItem('lastUsedAccountId')
-      if (lastAccountId && accounts.find(a => a.id === lastAccountId)) {
-        setTransactionAccountId(lastAccountId)
-      } else if (accounts.length === 1) {
-        setTransactionAccountId(accounts[0].id)
-      } else {
-        setTransactionAccountId('')
+      try {
+        const lastAccountId = typeof localStorage !== 'undefined' ? localStorage.getItem('lastUsedAccountId') : null
+        if (lastAccountId && accounts.find(a => a.id === lastAccountId)) {
+          setTransactionAccountId(lastAccountId)
+        } else if (accounts.length === 1) {
+          setTransactionAccountId(accounts[0].id)
+        } else {
+          setTransactionAccountId('')
+        }
+      } catch (e) {
+        // localStorage might not be available (e.g., in test environment)
+        if (accounts.length === 1) {
+          setTransactionAccountId(accounts[0].id)
+        } else {
+          setTransactionAccountId('')
+        }
       }
       setRecurrence({
         frequency: 'monthly',
@@ -522,7 +531,13 @@ export default function Home() {
     
     // Save most recently used account to localStorage
     if (transactionAccountId) {
-      localStorage.setItem('lastUsedAccountId', transactionAccountId)
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('lastUsedAccountId', transactionAccountId)
+        }
+      } catch (e) {
+        // localStorage might not be available (e.g., in test environment)
+      }
     }
     
     // Use transactionDate state - convert to calendar date string (YYYY-MM-DD)
