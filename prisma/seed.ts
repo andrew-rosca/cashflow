@@ -3,6 +3,20 @@ import { today } from '../src/lib/logical-date'
 
 const prisma = new PrismaClient()
 
+// Helper to convert dayOfMonth to database format
+function dayOfMonthToDbValue(dayOfMonth: number): any {
+  const dbUrl = process.env.DATABASE_URL || ''
+  const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
+  
+  if (isPostgres) {
+    // PostgreSQL: return as JSON array
+    return [dayOfMonth]
+  } else {
+    // SQLite: return as JSON string
+    return JSON.stringify([dayOfMonth])
+  }
+}
+
 async function main() {
   // Check if we should seed only the user (no accounts/transactions)
   const seedUserOnly = process.argv.includes('--user-only') || process.env.SEED_USER_ONLY === 'true'
@@ -130,7 +144,7 @@ async function main() {
         create: {
           frequency: 'monthly',
           interval: 1,
-          dayOfMonth: 1,
+          dayOfMonth: dayOfMonthToDbValue(1),
         },
       },
     },
@@ -150,7 +164,7 @@ async function main() {
         create: {
           frequency: 'monthly',
           interval: 1,
-          dayOfMonth: 15,
+          dayOfMonth: dayOfMonthToDbValue(15),
         },
       },
     },
@@ -170,7 +184,7 @@ async function main() {
         create: {
           frequency: 'monthly',
           interval: 1,
-          dayOfMonth: 5,
+          dayOfMonth: dayOfMonthToDbValue(5),
         },
       },
     },
@@ -190,7 +204,7 @@ async function main() {
         create: {
           frequency: 'monthly',
           interval: 1,
-          dayOfMonth: 25,
+          dayOfMonth: dayOfMonthToDbValue(25),
         },
       },
     },

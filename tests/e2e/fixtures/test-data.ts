@@ -1,4 +1,20 @@
 import { PrismaClient } from '@prisma/client'
+
+// Helper to convert dayOfMonth to database format
+function dayOfMonthToDbValue(dayOfMonth: number | undefined): any {
+  if (dayOfMonth === undefined) return null
+  
+  const dbUrl = process.env.DATABASE_URL || ''
+  const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
+  
+  if (isPostgres) {
+    // PostgreSQL: return as JSON array
+    return [dayOfMonth]
+  } else {
+    // SQLite: return as JSON string
+    return JSON.stringify([dayOfMonth])
+  }
+}
 import { today } from '@/lib/logical-date'
 
 /**
@@ -136,7 +152,7 @@ export async function createTestRecurringTransaction(
       transactionId: transaction.id,
       frequency: options.frequency,
       dayOfWeek: options.dayOfWeek,
-      dayOfMonth: options.dayOfMonth,
+      dayOfMonth: dayOfMonthToDbValue(options.dayOfMonth),
       interval: options.interval,
       endDate: options.endDate,
       occurrences: options.occurrences,

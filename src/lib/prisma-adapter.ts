@@ -77,6 +77,7 @@ function dayOfMonthFromDbValue(dbValue: any): number | number[] | undefined {
 
 export class PrismaDataAdapter implements DataAdapter {
   private prisma: PrismaClient
+  private dbUrl: string | undefined
 
   constructor(prismaInstance?: PrismaClient) {
     if (prismaInstance) {
@@ -90,6 +91,8 @@ export class PrismaDataAdapter implements DataAdapter {
       // In production/development, use the singleton Proxy
       this.prisma = defaultPrisma
     }
+    // Get DATABASE_URL from environment
+    this.dbUrl = process.env.DATABASE_URL
   }
   // Accounts
   async getAccounts(userId: string): Promise<Account[]> {
