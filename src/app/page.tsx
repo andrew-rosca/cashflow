@@ -1279,9 +1279,9 @@ export default function Home() {
     : null
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-[auto_1fr] gap-8">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-8 overflow-x-auto">
+      <div className="min-w-full">
+        <div className="grid grid-cols-[auto_minmax(500px,_max-content)] gap-8 max-w-fit">
           {/* Left sidebar - Account balances and transactions */}
           <div className="space-y-6 w-80">
             {/* Current Balances */}
@@ -1546,25 +1546,25 @@ export default function Home() {
           </div>
 
           {/* Right side - Projection table */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden justify-self-start w-fit max-w-full min-w-[500px]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg justify-self-start w-fit min-w-[500px]">
+            <div>
+              <table className="w-full text-sm min-w-[500px] border-collapse bg-transparent">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                    <th className="text-left py-2 px-4 font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide text-xs whitespace-nowrap min-w-[200px]">
+                    <th className="text-left py-2 px-4 font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide text-xs whitespace-nowrap min-w-[200px] bg-gray-50 dark:bg-gray-800">
                       Date
                     </th>
                     {accounts.map(account => (
                       <th
                         key={account.id}
-                        className="text-right py-2 px-4 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap"
+                        className="text-right py-2 px-4 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap bg-gray-50 dark:bg-gray-800"
                       >
                         {account.name}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-transparent">
                   {projectionDates.map((date, idx) => {
                     const dateStr = date.toString()
                     const isExpanded = expandedRows.has(dateStr)
@@ -1573,19 +1573,23 @@ export default function Home() {
                       const balance = getProjectedBalance(account.id, date)
                       return balance !== null && balance < 0
                     })
+                    // Compute background class once per row
+                    const rowBgClass = hasNegativeBalance 
+                      ? 'bg-orange-100/60 dark:bg-orange-900/30' 
+                      : idx % 5 === 0 
+                        ? 'bg-gray-50 dark:bg-gray-900/50' 
+                        : 'bg-transparent'
+                    // Compute background for expanded rows
+                    const expandedRowBgClass = hasNegativeBalance 
+                      ? 'bg-orange-100/50 dark:bg-orange-900/40' 
+                      : 'bg-gray-50/40 dark:bg-gray-800/30'
                     return (
                       <React.Fragment key={dateStr}>
                         <tr
-                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${
-                            hasNegativeBalance 
-                              ? 'bg-orange-100/60 dark:bg-orange-900/30' 
-                              : idx % 5 === 0 
-                                ? 'bg-gray-50 dark:bg-gray-900/50' 
-                                : ''
-                          }`}
+                          className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${rowBgClass}`}
                           onClick={() => toggleRowExpansion(date)}
                         >
-                          <td className="py-2 px-4 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap min-w-[200px]">
+                          <td className={`py-2 px-4 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap min-w-[200px] ${rowBgClass}`}>
                             {formatDateWithDayOfWeek(date)}
                           </td>
                           {accounts.map(account => {
@@ -1598,7 +1602,7 @@ export default function Home() {
                             return (
                               <td
                                 key={account.id}
-                                className="py-2 px-4 text-right font-mono whitespace-nowrap"
+                                className={`py-2 px-4 text-right font-mono whitespace-nowrap ${rowBgClass}`}
                               >
                                 {balance !== null ? (
                                   <div className="flex items-center justify-end gap-1">
@@ -1637,16 +1641,12 @@ export default function Home() {
                               return accountTransactions.map(({ transaction, amount }) => (
                                 <tr 
                                   key={`${account.id}-${transaction.id}`} 
-                                  className={`border-b border-gray-100 dark:border-gray-800 ${
-                                    hasNegativeBalance 
-                                      ? 'bg-orange-100/50 dark:bg-orange-900/40' 
-                                      : 'bg-gray-50/40 dark:bg-gray-800/30'
-                                  }`} 
+                                  className={`border-b border-gray-100 dark:border-gray-800 ${expandedRowBgClass}`} 
                                   data-expanded-row="true"
                                   onMouseEnter={() => setHoveredTransactionId(transaction.id)}
                                   onMouseLeave={() => setHoveredTransactionId(null)}
                                 >
-                                  <td className="py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px]">
+                                  <td className={`py-2 px-4 text-gray-500 dark:text-gray-400 whitespace-nowrap min-w-[200px] ${expandedRowBgClass}`}>
                                     <div className="flex items-center gap-1 pl-6 text-xs">
                                       {transaction.recurrence ? (
                                         <Tooltip content={accounts.length > 0 ? getTransactionTooltip(transaction) : ''}>
@@ -1679,7 +1679,7 @@ export default function Home() {
                                   {accounts.map(acc => (
                                     <td
                                       key={acc.id}
-                                      className="py-2 px-4 text-right font-mono whitespace-nowrap text-xs"
+                                      className={`py-2 px-4 text-right font-mono whitespace-nowrap text-xs ${expandedRowBgClass}`}
                                     >
                                       {acc.id === account.id ? (
                                         <span className="text-gray-500 dark:text-gray-400">
