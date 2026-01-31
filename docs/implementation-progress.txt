@@ -926,6 +926,44 @@ Current feature status: 64/92 complete (69.6%)
 
 ---
 
+### Session 11 - Bulk balance update (January 31, 2026)
+
+**Status**: Bulk balance update feature complete with prototype and main UI integration
+
+**Completed Work:**
+
+1. **Standalone HTML prototype** (`public/bulk-balance-update-prototype.html`)
+   - Mock Current Balances panel with "Update all" button next to +
+   - Dialog: "Update all balances" with single date (today), one balance input per account
+   - Tab order: account inputs → Save → Cancel → cycles back to first input; focus trapped in dialog
+   - First balance input focused and selected on open; select-on-focus when tabbing to any balance input
+   - Save updates in-memory state; Cancel/Escape/overlay click closes
+   - Self-contained (no external CSS/JS) for UX refinement
+
+2. **Main UI integration** (`src/app/page.tsx`)
+   - "Update all" button in Current Balances header (next to +), disabled when no accounts
+   - Bulk balance dialog: title, "As of [date]" (today), one controlled input per account, Cancel and Save buttons
+   - openBulkBalanceDialog initializes form from current account balances
+   - handleBulkBalanceSave: PUT each account with balanceAsOf (today) and initialBalance from form; then loadAccounts()
+   - Focus trap (useEffect): Tab/Shift+Tab cycles inputs → Save → Cancel; Escape closes
+   - First input focused and selected when dialog opens; onFocus selects all on balance inputs
+   - Accessibility: role="dialog", aria-labelledby, aria-modal
+
+**What Works:**
+- User can open "Update all" from Current Balances to set all account balances and date in one dialog
+- Single date (today) applied to all accounts; minimal clicks (type and tab through)
+- Prototype available at /bulk-balance-update-prototype.html for UX iteration
+
+**Files Changed:**
+- `public/bulk-balance-update-prototype.html` (new)
+- `src/app/page.tsx` (state, handlers, button, dialog, focus trap)
+
+**Next Steps:**
+- Optional: bulk-update API (single request) to reduce N PUTs
+- Optional: E2E test for bulk balance update flow
+
+---
+
 ## Notes
 
 - Currently using stub user ID ("user-1") in API routes

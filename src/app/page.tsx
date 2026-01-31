@@ -57,6 +57,7 @@ export default function Home() {
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>('')
   const dateValueRef = useRef<Record<string, string>>({})
+  const bulkDialogRef = useRef<HTMLDivElement>(null)
   
   // Helper to get today's date (client-side only - uses browser's local date)
   const getToday = (): LogicalDate => {
@@ -84,6 +85,8 @@ export default function Home() {
   const [rawInputLoading, setRawInputLoading] = useState(false)
   const [rawInputError, setRawInputError] = useState<string | null>(null)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
+  const [bulkBalanceDialogOpen, setBulkBalanceDialogOpen] = useState(false)
+  const [bulkBalanceValues, setBulkBalanceValues] = useState<Record<string, string>>({})
   
   // Number formatting preference (stored in user account)
   const [formatNumbersWithoutDecimals, setFormatNumbersWithoutDecimals] = useState(false)
@@ -133,6 +136,50 @@ export default function Home() {
         })
     }
   }, [rawInputDialogOpen])
+
+  // Bulk balance dialog: focus trap and focus first input when open
+  useEffect(() => {
+    if (!bulkBalanceDialogOpen) return
+    const dialogEl = bulkDialogRef.current
+    if (!dialogEl) return
+
+    const getFocusables = () => {
+      const inputs = Array.from(dialogEl.querySelectorAll<HTMLInputElement>('input:not([disabled])'))
+      const saveBtn = document.getElementById('bulk-balance-save')
+      const cancelBtn = document.getElementById('bulk-balance-cancel')
+      return [...inputs, saveBtn, cancelBtn].filter((el): el is HTMLElement => el != null)
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeBulkBalanceDialog()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const focusables = getFocusables()
+      if (focusables.length === 0) return
+      const idx = focusables.indexOf(document.activeElement as HTMLElement)
+      if (idx === -1) return
+      e.preventDefault()
+      const nextIdx = e.shiftKey ? (idx - 1 + focusables.length) % focusables.length : (idx + 1) % focusables.length
+      focusables[nextIdx].focus()
+    }
+
+    const firstInput = dialogEl.querySelector<HTMLInputElement>('input')
+    const focusFirst = () => {
+      if (firstInput) {
+        firstInput.focus()
+        firstInput.select()
+      }
+    }
+    const t = setTimeout(focusFirst, 0)
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      clearTimeout(t)
+    }
+  }, [bulkBalanceDialogOpen])
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -434,6 +481,34 @@ export default function Home() {
       }
     }
     closeAccountDialog()
+  }
+
+  const openBulkBalanceDialog = () => {
+    setBulkBalanceValues(Object.fromEntries(accounts.map(a => [a.id, a.initialBalance.toString()])))
+    setBulkBalanceDialogOpen(true)
+  }
+
+  const closeBulkBalanceDialog = () => {
+    setBulkBalanceDialogOpen(false)
+  }
+
+  const handleBulkBalanceSave = async () => {
+    const todayStr = getToday().toString()
+    try {
+      for (const account of accounts) {
+        const value = bulkBalanceValues[account.id] ?? account.initialBalance.toString()
+        const initialBalance = parseFloat(value) || 0
+        await fetch(`/api/accounts/${account.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ balanceAsOf: todayStr, initialBalance }),
+        })
+      }
+      await loadAccounts()
+      closeBulkBalanceDialog()
+    } catch (error) {
+      console.error('Failed to update balances:', error)
+    }
   }
 
   const handleTransactionDelete = async () => {
@@ -1290,12 +1365,22 @@ export default function Home() {
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Current Balances
                 </h2>
-                <button 
-                  onClick={handleAddAccount}
-                  className="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:border-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 flex items-center justify-center text-xs transition-colors"
-                >
-                  +
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={openBulkBalanceDialog}
+                    disabled={accounts.length === 0}
+                    className="text-xs px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:border-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                  >
+                    Update all
+                  </button>
+                  <button 
+                    onClick={handleAddAccount}
+                    className="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-gray-600 hover:border-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 flex items-center justify-center text-xs transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <div className="space-y-1">
                 {accounts.map(account => {
@@ -1765,6 +1850,66 @@ export default function Home() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk balance update dialog */}
+        {bulkBalanceDialogOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={closeBulkBalanceDialog}
+            aria-hidden="false"
+          >
+            <div
+              ref={bulkDialogRef}
+              role="dialog"
+              aria-labelledby="bulk-balance-dialog-title"
+              aria-modal="true"
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl min-w-[20rem]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 id="bulk-balance-dialog-title" className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                Update all balances
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                As of {formatDate(getToday())}
+              </p>
+              <div className="space-y-3 mb-5">
+                {accounts.map(account => (
+                  <div key={account.id} className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3 items-center">
+                    <label htmlFor={`bulk-balance-${account.id}`} className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                      {account.name}
+                    </label>
+                    <input
+                      id={`bulk-balance-${account.id}`}
+                      type="text"
+                      value={bulkBalanceValues[account.id] ?? ''}
+                      onChange={(e) => setBulkBalanceValues(prev => ({ ...prev, [account.id]: e.target.value }))}
+                      onFocus={(e) => e.target.select()}
+                      className="text-sm font-mono text-right px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  id="bulk-balance-cancel"
+                  onClick={closeBulkBalanceDialog}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  id="bulk-balance-save"
+                  onClick={handleBulkBalanceSave}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         )}
